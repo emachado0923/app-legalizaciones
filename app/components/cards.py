@@ -123,7 +123,7 @@ def create_estrato_resumen_card(estrato_text, estrato_class,
             </div>
             
             <div class="estrato-metric-row">
-                <span class="estrato-metric-label" style="color: #34a853;">Usuarios</span>
+                <span class="estrato-metric-label" style="color: #34a853;">Legalizados</span>
                 <span class="estrato-metric-value" style="color: #34a853;">{format_number_integer(usuarios)}</span>
             </div>
         </div>
