@@ -97,7 +97,7 @@ def render_overview_page(df):
                      height: 25px; border-radius: 12.5px 0 0 12.5px; 
                      display: flex; align-items: center; justify-content: center;'>
                 <span style='color: white; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);'>
-                    {usuarios_123:,.0f} usuarios
+                    {usuarios_123:,.0f} legalizados
                 </span>
             </div>
             """, unsafe_allow_html=True)
@@ -108,7 +108,7 @@ def render_overview_page(df):
                      height: 25px; border-radius: 0 12.5px 12.5px 0; 
                      display: flex; align-items: center; justify-content: center;'>
                 <span style='color: white; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);'>
-                    {usuarios_456:,.0f} usuarios
+                    {usuarios_456:,.0f} legalizados
                 </span>
             </div>
             """, unsafe_allow_html=True)
