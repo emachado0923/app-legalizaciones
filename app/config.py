@@ -7,7 +7,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Configuración de base de datos (se puede sobrescribir con .env)
 DB_CONFIG = {
-    'host': os.getenv('DB_HOST', '34.70.133.119'),
+    'host': os.getenv('DB_HOST', '10.124.80.4'),
     'database': os.getenv('DB_NAME', 'convocatoria_sapiencia'),
     'user': os.getenv('DB_USER', 'julian.usuga'),
     'password': os.getenv('DB_PASSWORD', 'bhcL14K&~y&<dfo*'),
