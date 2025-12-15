@@ -1,9 +1,10 @@
-# app/components/cards.py - CON VALORES COMPLETOS Y MENSAJES
+# app/components/cards.py - CON VALORES COMPLETOS Y ENTEROS
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
+from app.utils import get_comuna_numero  # Importar función centralizada
 
-# Mapeo de comunas con sus números (se mantiene igual)
+# Mapeo de comunas con sus números (se mantiene por compatibilidad, pero se usará de utils)
 COMUNA_NUMEROS = {
     "POPULAR": "01",
     "SANTA CRUZ": "02", 
@@ -28,29 +29,27 @@ COMUNA_NUMEROS = {
     "SANTA ELENA": "90"
 }
 
-# NUEVA FUNCIÓN: Formato de moneda COMPLETO
 def format_currency_complete(value):
-    """Formatear valor como moneda COMPLETA sin abreviaturas"""
+    """Formatear valor como moneda COMPLETA sin abreviaturas - SOLO ENTEROS"""
     if pd.isna(value) or value is None:
         return "$ 0"
     try:
-        value = float(value)
-        # Mostrar con separadores de miles y 2 decimales SIEMPRE
-        return f"$ {value:,.2f}"
+        # Convertir a entero
+        value_int = int(float(value))
+        # Mostrar con separadores de miles sin decimales
+        return f"$ {value_int:,}"
     except (ValueError, TypeError):
         return "$ 0"
 
-def get_comuna_numero(comuna_nombre):
-    """Obtener número de comuna a partir del nombre"""
-    comuna_upper = comuna_nombre.upper().strip()
-    for comuna, numero in COMUNA_NUMEROS.items():
-        if comuna in comuna_upper or comuna_upper in comuna:
-            return numero
-    import re
-    match = re.search(r'(\d{2})', comuna_nombre)
-    if match:
-        return match.group(1)
-    return "00"
+def format_number_integer(value):
+    """Formatear número como entero sin decimales"""
+    if pd.isna(value) or value is None:
+        return "0"
+    try:
+        value_int = int(float(value))
+        return f"{value_int:,}"
+    except (ValueError, TypeError):
+        return "0"
 
 def get_status_color_tv(percentage):
     """Obtener color optimizado para TV según porcentaje"""
@@ -125,7 +124,7 @@ def create_estrato_resumen_card(estrato_text, estrato_class,
             
             <div class="estrato-metric-row">
                 <span class="estrato-metric-label" style="color: #34a853;">Usuarios</span>
-                <span class="estrato-metric-value" style="color: #34a853;">{int(usuarios):,}</span>
+                <span class="estrato-metric-value" style="color: #34a853;">{format_number_integer(usuarios)}</span>
             </div>
         </div>
         
@@ -143,7 +142,7 @@ def create_estrato_resumen_card(estrato_text, estrato_class,
     '''
 
 def create_fiducias_card(fiducias_data, estrato_text, has_data=True):
-    """Crear tarjeta con detalle de fiducias"""
+    """Crear tarjeta con detalle de fiducias - VALORES ENTEROS"""
     
     if not has_data or fiducias_data.empty:
         return f'''
@@ -166,8 +165,15 @@ def create_fiducias_card(fiducias_data, estrato_text, has_data=True):
     fiducias_html = ""
     for _, fiducia in fiducias_data.iterrows():
         fiducia_id = fiducia.get('idfiducia', 'N/A')
-        presupuesto = float(fiducia['presupuesto_comuna'])
-        restante = float(fiducia['restante_presupuesto_comuna'])
+        
+        # Asegurar que los valores sean enteros
+        try:
+            presupuesto = int(float(fiducia['presupuesto_comuna']))
+            restante = int(float(fiducia['restante_presupuesto_comuna']))
+        except (ValueError, TypeError):
+            presupuesto = 0
+            restante = 0
+            
         consumido = presupuesto - restante
         porcentaje = (consumido / presupuesto * 100) if presupuesto > 0 else 0
         bar_color = get_status_color_tv(porcentaje)
@@ -179,7 +185,7 @@ def create_fiducias_card(fiducias_data, estrato_text, has_data=True):
                 <div class="fiducia-porcentaje" style="color: {bar_color};">{porcentaje:.1f}%</div>
             </div>
             
-            <div class="fiducia-metrics">
+            <div class="fiducias-metrics">
                 <div class="fiducia-metric">
                     <div class="fiducia-metric-label">Presupuesto</div>
                     <div class="fiducia-metric-value">{format_currency_complete(presupuesto)}</div>
@@ -190,7 +196,7 @@ def create_fiducias_card(fiducias_data, estrato_text, has_data=True):
                 </div>
             </div>
             
-            <div class="fiducia-progress">
+            <div class="fiducias-progress">
                 <div class="fiducia-progress-bar">
                     <div class="fiducia-progress-fill" style="width: {porcentaje}%; background: {bar_color};"></div>
                 </div>
@@ -218,9 +224,14 @@ def create_comuna_estrato_row(comuna_nombre, estrato_text, estrato_class,
     has_data = resumen_data is not None and len(fiducias_data) > 0
     
     if has_data:
-        presupuesto = float(resumen_data['presupuesto_comuna'])
-        restante = float(resumen_data['restante_presupuesto_comuna'])
-        usuarios = float(resumen_data['numero_usuarios_comuna'])
+        # Asegurar que los valores sean enteros
+        try:
+            presupuesto = int(float(resumen_data['presupuesto_comuna']))
+            restante = int(float(resumen_data['restante_presupuesto_comuna']))
+            usuarios = int(float(resumen_data['numero_usuarios_comuna']))
+        except (ValueError, TypeError):
+            presupuesto = restante = usuarios = 0
+            
         consumido = presupuesto - restante
         porcentaje = (consumido / presupuesto * 100) if presupuesto > 0 else 0
     else:
@@ -247,6 +258,7 @@ def create_comuna_estrato_row(comuna_nombre, estrato_text, estrato_class,
 def create_comuna_section(comuna_nombre, resumen_123, fiducias_123, resumen_456, fiducias_456):
     """Crear sección completa para una comuna"""
     
+    # Usar la función importada desde utils.py
     comuna_numero = get_comuna_numero(comuna_nombre)
     
     return f'''
@@ -278,7 +290,7 @@ def create_comuna_section(comuna_nombre, resumen_123, fiducias_123, resumen_456,
     '''
 
 def create_fiducias_grid(df, grupo_estrato="Todos"):
-    """Crear grid con nueva estructura de fiducias"""
+    """Crear grid con nueva estructura de fiducias - VALORES ENTEROS"""
     
     if df.empty:
         st.warning("📭 No hay datos para mostrar")
@@ -319,7 +331,7 @@ def create_fiducias_grid(df, grupo_estrato="Todos"):
         st.info(f"📭 No hay datos para {grupo_estrato}")
         return
     
-    # Ordenar comunas por número
+    # Ordenar comunas por número usando la función importada
     comunas_ordenadas = []
     for comuna in all_comunas:
         numero = get_comuna_numero(comuna)
@@ -328,17 +340,22 @@ def create_fiducias_grid(df, grupo_estrato="Todos"):
     comunas_ordenadas.sort(key=lambda x: x[0])
     comunas_finales = [comuna for _, comuna in comunas_ordenadas]
     
-    # Preparar datos agrupados por comuna
+    # Preparar datos agrupados por comuna - ASEGURAR VALORES ENTEROS
     comunas_data = {}
     
     for comuna in comunas_finales:
         # Datos para Estratos 1-3
         df_comuna_123 = df_123[df_123['Comuna Base'] == comuna]
         if not df_comuna_123.empty:
+            # Sumar y convertir a enteros
+            presupuesto_123 = int(df_comuna_123['presupuesto_comuna'].sum())
+            restante_123 = int(df_comuna_123['restante_presupuesto_comuna'].sum())
+            usuarios_123 = int(df_comuna_123['numero_usuarios_comuna'].sum())
+            
             resumen_123 = {
-                'presupuesto_comuna': df_comuna_123['presupuesto_comuna'].sum(),
-                'restante_presupuesto_comuna': df_comuna_123['restante_presupuesto_comuna'].sum(),
-                'numero_usuarios_comuna': df_comuna_123['numero_usuarios_comuna'].sum()
+                'presupuesto_comuna': presupuesto_123,
+                'restante_presupuesto_comuna': restante_123,
+                'numero_usuarios_comuna': usuarios_123
             }
             fiducias_123 = df_comuna_123[['idfiducia', 'presupuesto_comuna', 'restante_presupuesto_comuna']].copy()
         else:
@@ -348,10 +365,15 @@ def create_fiducias_grid(df, grupo_estrato="Todos"):
         # Datos para Estratos 4-6
         df_comuna_456 = df_456[df_456['Comuna Base'] == comuna]
         if not df_comuna_456.empty:
+            # Sumar y convertir a enteros
+            presupuesto_456 = int(df_comuna_456['presupuesto_comuna'].sum())
+            restante_456 = int(df_comuna_456['restante_presupuesto_comuna'].sum())
+            usuarios_456 = int(df_comuna_456['numero_usuarios_comuna'].sum())
+            
             resumen_456 = {
-                'presupuesto_comuna': df_comuna_456['presupuesto_comuna'].sum(),
-                'restante_presupuesto_comuna': df_comuna_456['restante_presupuesto_comuna'].sum(),
-                'numero_usuarios_comuna': df_comuna_456['numero_usuarios_comuna'].sum()
+                'presupuesto_comuna': presupuesto_456,
+                'restante_presupuesto_comuna': restante_456,
+                'numero_usuarios_comuna': usuarios_456
             }
             fiducias_456 = df_comuna_456[['idfiducia', 'presupuesto_comuna', 'restante_presupuesto_comuna']].copy()
         else:
@@ -365,7 +387,7 @@ def create_fiducias_grid(df, grupo_estrato="Todos"):
             'fiducias_456': fiducias_456
         }
     
-    # CSS para la nueva estructura (CON ESTILOS PARA "NO APLICA")
+    # DEFINIR EL CSS DENTRO DE LA FUNCIÓN - CORREGIDO
     fiducias_css = '''
     <style>
     /* RESET */
@@ -737,7 +759,7 @@ def create_fiducias_grid(df, grupo_estrato="Todos"):
         font-family: 'Inter', sans-serif !important;
     }
     
-    .fiducia-metrics {
+    .fiducias-metrics {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 15px;
@@ -768,7 +790,7 @@ def create_fiducias_grid(df, grupo_estrato="Todos"):
         color: #34a853;
     }
     
-    .fiducia-progress {
+    .fiducias-progress {
         margin-top: 10px;
     }
     
@@ -861,7 +883,7 @@ def create_fiducias_grid(df, grupo_estrato="Todos"):
     </html>
     '''
     
-    # Mostrar estadísticas
+    # Mostrar estadísticas - VALORES ENTEROS
     col1, col2, col3 = st.columns(3)
     with col1:
         total_fiducias = len(df_filtrado['idfiducia'].unique()) if 'idfiducia' in df_filtrado.columns else 0
@@ -874,12 +896,12 @@ def create_fiducias_grid(df, grupo_estrato="Todos"):
         )
     
     with col2:
-        total_presupuesto = df_filtrado['presupuesto_comuna'].sum() if not df_filtrado.empty else 0
+        total_presupuesto = int(df_filtrado['presupuesto_comuna'].sum()) if not df_filtrado.empty else 0
         st.metric("PRESUPUESTO TOTAL", format_currency_complete(total_presupuesto))
     
     with col3:
-        total_usuarios = df_filtrado['numero_usuarios_comuna'].sum() if not df_filtrado.empty else 0
-        st.metric("LEGALIZADOS", f"{total_usuarios:,.0f}")
+        total_usuarios = int(df_filtrado['numero_usuarios_comuna'].sum()) if not df_filtrado.empty else 0
+        st.metric("LEGALIZADOS", f"{total_usuarios:,}")
     
     # Mostrar el grid
     st.markdown("---")

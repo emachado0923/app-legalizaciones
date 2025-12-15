@@ -1,7 +1,33 @@
 # app/utils.py
 import pandas as pd
 import numpy as np
+import re
 from app.config import COMUNA_MAPPING
+
+# Mapeo de números de comuna (debería estar en config o importarse de cards.py)
+COMUNA_NUMEROS = {
+    "POPULAR": "01",
+    "SANTA CRUZ": "02", 
+    "MANRIQUE": "03",
+    "ARANJUEZ": "04",
+    "CASTILLA": "05",
+    "DOCE DE OCTUBRE": "06",
+    "ROBLEDO": "07",
+    "VILLA HERMOSA": "08",
+    "BUENOS AIRES": "09",
+    "LA CANDELARIA": "10",
+    "LAURELES/ESTADIO": "11",
+    "LA AMERICA": "12",
+    "SAN JAVIER": "13",
+    "POBLADO": "14",
+    "GUAYABAL": "15",
+    "BELEN": "16",
+    "SAN SEBASTIAN DE PALMITAS": "50",
+    "SAN CRISTOBAL": "60",
+    "ALTAVISTA": "70",
+    "SAN ANTONIO DE PRADO": "80",
+    "SANTA ELENA": "90"
+}
 
 def format_currency(value):
     """Formatear valor como moneda SIN REDONDEAR - mostrar completo"""
@@ -30,18 +56,68 @@ def get_status_color(percentage):
     else:
         return "#34a853"  # Verde
 
+def get_comuna_numero(comuna_nombre):
+    """Obtener número de comuna a partir del nombre"""
+    if not comuna_nombre or pd.isna(comuna_nombre):
+        return "00"
+    
+    comuna_upper = str(comuna_nombre).upper().strip()
+    for comuna, numero in COMUNA_NUMEROS.items():
+        if comuna in comuna_upper or comuna_upper in comuna:
+            return numero
+    # Intentar extraer número del texto
+    match = re.search(r'(\d{2})', comuna_upper)
+    if match:
+        return match.group(1)
+    return "00"
+
+def format_comuna_con_numero(comuna_nombre):
+    """Formatear comuna con número: '01 - Popular'"""
+    if not comuna_nombre or comuna_nombre == "TODAS LAS COMUNAS":
+        return comuna_nombre
+    
+    numero = get_comuna_numero(comuna_nombre)
+    return f"{numero} - {comuna_nombre}"
+
+def get_comunas_formateadas(df):
+    """Obtener lista de comunas formateadas con números"""
+    if 'Comuna Base' not in df.columns and 'Nombre Comuna' in df.columns:
+        df['Comuna Base'] = df['Nombre Comuna'].apply(
+            lambda x: str(x).split(' - ')[1] if ' - ' in str(x) else str(x)
+        )
+    
+    if 'Comuna Base' not in df.columns:
+        return [], {}
+    
+    comunas_disponibles = sorted(df['Comuna Base'].unique())
+    
+    # Crear opciones formateadas
+    opciones_comuna = ["TODAS LAS COMUNAS"]
+    opciones_comuna += [format_comuna_con_numero(comuna) for comuna in comunas_disponibles]
+    
+    # Crear mapeo de opción formateada a nombre real
+    opcion_a_nombre = {"TODAS LAS COMUNAS": "TODAS LAS COMUNAS"}
+    for comuna in comunas_disponibles:
+        opcion_formateada = format_comuna_con_numero(comuna)
+        opcion_a_nombre[opcion_formateada] = comuna
+    
+    return opciones_comuna, opcion_a_nombre
+
 def process_comuna_data(df):
-    """Procesar y enriquecer datos de comunas"""
+    """Procesar y enriquecer datos de comunas - CONVERSIÓN A ENTEROS"""
     if df.empty:
         return df
     
-    # Asegurar columnas numéricas
+    # Asegurar columnas numéricas - CONVERTIR A ENTEROS
     numeric_columns = ['presupuesto_comuna', 'restante_presupuesto_comuna', 
                       'acumulado_legali_comuna', 'numero_usuarios_comuna']
     
     for col in numeric_columns:
         if col in df.columns:
+            # Convertir a float primero para manejar NaN, luego a int
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+            # Convertir a enteros (redondear hacia abajo)
+            df[col] = df[col].astype(int)
         else:
             df[col] = 0
     
@@ -65,7 +141,7 @@ def process_comuna_data(df):
     return df
 
 def calculate_summary_metrics(df):
-    """Calcular métricas resumidas del dataset"""
+    """Calcular métricas resumidas del dataset - VALORES ENTEROS"""
     if df.empty:
         return {
             'total_presupuesto': 0,
@@ -75,9 +151,9 @@ def calculate_summary_metrics(df):
             'porcentaje_utilizacion': 0
         }
     
-    total_presupuesto = df['presupuesto_comuna'].sum()
-    total_restante = df['restante_presupuesto_comuna'].sum()
-    total_usuarios = df['numero_usuarios_comuna'].sum()
+    total_presupuesto = int(df['presupuesto_comuna'].sum())
+    total_restante = int(df['restante_presupuesto_comuna'].sum())
+    total_usuarios = int(df['numero_usuarios_comuna'].sum())
     total_comunas = df['Nombre Comuna'].nunique() if 'Nombre Comuna' in df.columns else 0
     
     if total_presupuesto > 0:

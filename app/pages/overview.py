@@ -1,7 +1,7 @@
-# app/pages/overview.py - CON FILTRO DE COMUNA
+# app/pages/overview.py - CON FILTRO DE COMUNA CON NÚMERO (USANDO UTILS)
 import streamlit as st
 import pandas as pd
-from app.utils import calculate_summary_metrics
+from app.utils import calculate_summary_metrics, get_comunas_formateadas, get_comuna_numero, format_comuna_con_numero
 from app.components.cards import create_tv_cards_grid
 
 def render_overview_page(df):
@@ -117,32 +117,29 @@ def render_overview_page(df):
     st.markdown("<div style='height: 40px;'></div>", unsafe_allow_html=True)
     st.markdown("---")
     
-    # FILTRO DE COMUNA (NUEVO)
+    # FILTRO DE COMUNA (NUEVO) CON NÚMEROS
     st.markdown("<h2 style='text-align: center; color: #1a73e8; margin: 20px 0 20px 0;'>🏘️ RECURSOS POR COMUNA</h2>", 
                 unsafe_allow_html=True)
     
-    # Preparar lista de comunas
-    if 'Comuna Base' not in df.columns and 'Nombre Comuna' in df.columns:
-        df['Comuna Base'] = df['Nombre Comuna'].apply(
-            lambda x: str(x).split(' - ')[1] if ' - ' in str(x) else str(x)
-        )
+    # Obtener comunas formateadas usando función centralizada
+    opciones_comuna, opcion_a_nombre = get_comunas_formateadas(df)
     
-    # Obtener comunas únicas ordenadas
-    if 'Comuna Base' in df.columns:
-        comunas_disponibles = sorted(df['Comuna Base'].unique())
-        
+    if opciones_comuna:
         # Crear contenedor para el filtro
         col_filtro1, col_filtro2, col_filtro3 = st.columns([1, 2, 1])
         
         with col_filtro2:
             # Selector de comuna con estilo mejorado
-            comuna_seleccionada = st.selectbox(
+            opcion_seleccionada = st.selectbox(
                 "**🔍 SELECCIONAR COMUNA**",
-                options=["TODAS LAS COMUNAS"] + comunas_disponibles,
+                options=opciones_comuna,
                 index=0,
                 help="Selecciona una comuna específica para ver sus recursos",
                 key="filtro_comuna"
             )
+            
+            # Obtener el nombre real de la comuna
+            comuna_seleccionada = opcion_a_nombre[opcion_seleccionada]
             
             # Mostrar indicador de qué se está mostrando
             if comuna_seleccionada == "TODAS LAS COMUNAS":
@@ -155,11 +152,12 @@ def render_overview_page(df):
                 </div>
                 """, unsafe_allow_html=True)
             else:
+                # Mostrar con número y nombre
                 st.markdown(f"""
                 <div style='text-align: center; background: #e6f4ea; padding: 10px; 
                          border-radius: 10px; border: 2px solid #34a853; margin: 15px 0;'>
                     <span style='color: #0d652d; font-weight: 600; font-size: 16px;'>
-                        📍 Mostrando recursos de: <strong>{comuna_seleccionada}</strong>
+                        📍 Mostrando recursos de: <strong>{opcion_seleccionada}</strong>
                     </span>
                 </div>
                 """, unsafe_allow_html=True)
@@ -168,8 +166,14 @@ def render_overview_page(df):
     st.markdown("---")
     
     # FILTRAR DATOS SEGÚN COMUNA SELECCIONADA
-    if 'comuna_seleccionada' in locals() and comuna_seleccionada != "TODAS LAS COMUNAS":
+    if opciones_comuna and 'opcion_seleccionada' in locals() and comuna_seleccionada != "TODAS LAS COMUNAS":
         # Filtrar por comuna específica
+        # Asegurarse de que tenemos la columna Comuna Base
+        if 'Comuna Base' not in df.columns and 'Nombre Comuna' in df.columns:
+            df['Comuna Base'] = df['Nombre Comuna'].apply(
+                lambda x: str(x).split(' - ')[1] if ' - ' in str(x) else str(x)
+            )
+        
         df_filtrado = df[df['Comuna Base'] == comuna_seleccionada].copy()
         
         # Verificar si hay datos para esta comuna
@@ -197,8 +201,8 @@ def render_overview_page(df):
         last_update = st.session_state.last_refresh.strftime('%H:%M:%S')
         
         # Información adicional sobre lo que se está mostrando
-        if 'comuna_seleccionada' in locals() and comuna_seleccionada != "TODAS LAS COMUNAS":
-            info_extra = f" | Comuna: {comuna_seleccionada}"
+        if opciones_comuna and 'comuna_seleccionada' in locals() and comuna_seleccionada != "TODAS LAS COMUNAS":
+            info_extra = f" | Comuna: {opcion_seleccionada}"
         else:
             info_extra = " | Todas las comunas"
         
