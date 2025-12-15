@@ -12,7 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Configuración de la aplicación
 class Settings:
     # Base de datos
-    DB_HOST = os.getenv("DB_HOST", "34.70.133.119")
+    DB_HOST = os.getenv("DB_HOST", "10.124.80.4")
     DB_PORT = int(os.getenv("DB_PORT", "3306"))
     DB_NAME = os.getenv("DB_NAME", "convocatoria_sapiencia")
     DB_USER = os.getenv("DB_USER", "julian.usuga")
