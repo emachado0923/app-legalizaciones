@@ -4,6 +4,7 @@ from datetime import datetime
 import time
 import pandas as pd
 from pathlib import Path
+from app.utils import get_colombia_time
 
 # Importaciones internas
 from app.config import APP_CONFIG
@@ -65,7 +66,7 @@ def main():
     
     # Inicializar estado de sesión
     if 'last_refresh' not in st.session_state:
-        st.session_state.last_refresh = datetime.now()
+        st.session_state.last_refresh = get_colombia_time()
         st.session_state.auto_refresh = True
     
     # Renderizar header
@@ -105,7 +106,7 @@ def main():
         # Actualización automática
         if st.session_state.auto_refresh:
             time.sleep(30)
-            st.session_state.last_refresh = datetime.now()
+            st.session_state.last_refresh = get_colombia_time()
             st.cache_data.clear()
             st.rerun()
     

@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import re
 from app.config import COMUNA_MAPPING
+from datetime import datetime, timedelta
 
 # Mapeo de números de comuna (debería estar en config o importarse de cards.py)
 COMUNA_NUMEROS = {
@@ -168,3 +169,44 @@ def calculate_summary_metrics(df):
         'total_comunas': total_comunas,
         'porcentaje_utilizacion': porcentaje_utilizacion
     }
+
+
+def get_colombia_time():
+    """
+    Obtiene la hora actual en zona horaria de Colombia (UTC-5)
+    No requiere pytz, usa cálculo manual
+    """
+    # Obtener hora UTC
+    utc_now = datetime.utcnow()
+    
+    # Colombia está en UTC-5 (no tiene horario de verano)
+    # Ajustar por 5 horas atrás
+    colombia_time = utc_now - timedelta(hours=5)
+    
+    return colombia_time
+
+def format_colombia_time(datetime_obj=None, formato='%d/%m/%Y %I:%M %p'):
+    """
+    Formatea una hora para mostrar en formato Colombia
+    Si no se pasa datetime_obj, usa la hora actual Colombia
+    
+    Args:
+        datetime_obj: datetime object (opcional)
+        formato: string con formato deseado
+        
+    Returns:
+        string con hora formateada
+    """
+    if datetime_obj is None:
+        datetime_obj = get_colombia_time()
+    
+    return datetime_obj.strftime(formato)
+
+def get_time_with_timezone():
+    """
+    Obtiene la hora actual con información de zona horaria
+    Útil para mostrar en la interfaz
+    """
+    col_time = get_colombia_time()
+    formatted = format_colombia_time(col_time)
+    return f"{formatted} (Hora Colombia)"

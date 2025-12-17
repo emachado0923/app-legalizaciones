@@ -1,7 +1,14 @@
-# app/pages/overview.py - CON FILTRO DE COMUNA CON NÚMERO (USANDO UTILS)
+# app/pages/overview.py - MODIFICADO
 import streamlit as st
 import pandas as pd
-from app.utils import calculate_summary_metrics, get_comunas_formateadas, get_comuna_numero, format_comuna_con_numero
+from app.utils import (
+    calculate_summary_metrics, 
+    get_comunas_formateadas, 
+    get_comuna_numero, 
+    format_comuna_con_numero,
+    get_colombia_time,  # <-- NUEVA IMPORTACIÓN
+    format_colombia_time  # <-- NUEVA IMPORTACIÓN
+)
 from app.components.cards import create_tv_cards_grid
 
 def render_overview_page(df):
@@ -195,22 +202,39 @@ def render_overview_page(df):
         # Para una comuna específica, mostrar solo esa
         create_tv_cards_grid(df_filtrado, "Todos")
     
-    # Pie de página
-    if 'last_refresh' in st.session_state:
-        from datetime import datetime
-        last_update = st.session_state.last_refresh.strftime('%H:%M:%S')
-        
-        # Información adicional sobre lo que se está mostrando
-        if opciones_comuna and 'comuna_seleccionada' in locals() and comuna_seleccionada != "TODAS LAS COMUNAS":
-            info_extra = f" | Comuna: {opcion_seleccionada}"
-        else:
-            info_extra = " | Todas las comunas"
-        
-        st.markdown(f"""
-        <div style='text-align: center; color: #80868b; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e0e0e0;'>
-            <div style='font-size: 14px; font-weight: 500;'>Sapiencia - Agencia de Educación Postsecundaria de Medellín</div>
-            <div style='font-size: 12px; margin-top: 5px;'>
-                Última actualización: {last_update}{info_extra}
-            </div>
+    # ============================
+    # PIE DE PÁGINA CON HORA COLOMBIA
+    # ============================
+    # Obtener la hora de Colombia usando la función de utils
+    col_time = get_colombia_time()
+    last_update = format_colombia_time(col_time)
+    
+    # Información adicional sobre lo que se está mostrando
+    if opciones_comuna and 'comuna_seleccionada' in locals() and comuna_seleccionada != "TODAS LAS COMUNAS":
+        info_extra = f" | Comuna: {opcion_seleccionada}"
+    else:
+        info_extra = " | Todas las comunas"
+    
+    # Crear tarjeta de última actualización (como en tu imagen)
+    st.markdown(f"""
+    <div style='
+        background-color: #f8f9fa;
+        padding: 12px 20px;
+        border-radius: 8px;
+        border-left: 5px solid #1a73e8;
+        margin: 40px auto 0 auto;
+        max-width: 600px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    '>
+        <div style='font-size: 14px; color: #5f6368; font-weight: 600; margin-bottom: 5px;'>
+            ÚLTIMA ACTUALIZACIÓN
         </div>
-        """, unsafe_allow_html=True)
+        <div style='font-size: 16px; color: #202124; font-weight: 700;'>
+            {last_update}
+        </div>
+        <div style='font-size: 12px; color: #80868b; margin-top: 8px;'>
+            Sapiencia - Agencia de Educación Postsecundaria de Medellín{info_extra}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
