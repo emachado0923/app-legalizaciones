@@ -215,7 +215,7 @@ def render_overview_page(df):
     else:
         info_extra = " | Todas las comunas"
     
-    # Crear tarjeta de última actualización (como en tu imagen)
+    # Crear tarjeta de última actualización
     st.markdown(f"""
     <div style='
         background-color: #f8f9fa;

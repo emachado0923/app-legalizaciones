@@ -1,5 +1,8 @@
-# app/pages/__init__.py - VERSIÓN ACTUALIZADA (SOLO OVERVIEW)
+# app/pages/__init__.py
 from .overview import render_overview_page
+from .citas import render_citas_page    # Nueva página
 
-# Solo exportamos overview, detail ya no se usa
-__all__ = ['render_overview_page']
+__all__ = [
+    'render_overview_page',
+    'render_citas_page'
+]

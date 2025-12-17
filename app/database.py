@@ -1,4 +1,4 @@
-# app/database.py
+# app/database.py - VERSIÓN SOLO DOCUMENTO
 import mysql.connector
 from mysql.connector import Error
 import pandas as pd
@@ -47,6 +47,32 @@ class DatabaseManager:
         WHERE periodo = %s
         """
         return self.execute_query(query, (period,))
+    
+    def get_citas_by_documento(self, documento):
+        """
+        Obtener citas SOLO por documento
+        Busca el documento en el campo nombre que tiene formato "Nombre - Documento"
+        """
+        if not documento or str(documento).strip() == "":
+            return None
+        
+        # Buscar documentos que terminen con el número ingresado
+        # Ej: Si nombre = "Juan Pérez - 123456789", buscar "%123456789"
+        query = """
+        SELECT 
+            taquilla,
+            hora_inicio,
+            fecha,
+            estado,
+            nombre,
+            fondo
+        FROM vw_citas_PP_EPM_legalizacion
+        WHERE nombre LIKE %s
+        ORDER BY fecha DESC, hora_inicio DESC
+        """
+        
+        # Buscar documento al final del campo nombre
+        return self.execute_query(query, (f"%{documento}%",))
 
 # Instancia global de la base de datos
 db = DatabaseManager()
