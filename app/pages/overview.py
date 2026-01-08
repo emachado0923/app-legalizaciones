@@ -1,4 +1,4 @@
-# app/pages/overview.py - MODIFICADO
+# app/pages/overview.py - VERSIÓN CON MÉTRICAS EN POSICIÓN CORRECTA
 import streamlit as st
 import pandas as pd
 from app.utils import (
@@ -6,19 +6,15 @@ from app.utils import (
     get_comunas_formateadas, 
     get_comuna_numero, 
     format_comuna_con_numero,
-    get_colombia_time,  # <-- NUEVA IMPORTACIÓN
-    format_colombia_time  # <-- NUEVA IMPORTACIÓN
+    get_colombia_time,
+    format_colombia_time
 )
 from app.components.cards import create_tv_cards_grid
 
 def render_overview_page(df):
     """Renderizar página con filtro de comuna"""
-    
-    # Título principal
-    st.markdown("<h1 style='text-align: center; color: #1a73e8; margin-bottom: 10px;'>📊 MONITOR DE RECURSOS POR COMUNA</h1>", 
-                unsafe_allow_html=True)
-    st.markdown("<h3 style='text-align: center; color: #5f6368; margin-bottom: 30px;'>Sapiencia - Convocatoria 2026-1</h3>", 
-                unsafe_allow_html=True)
+    st.markdown("<div style='height: 40px;'></div>", unsafe_allow_html=True)
+    st.markdown("---")
     
     # Calcular métricas
     metrics = calculate_summary_metrics(df)
@@ -124,7 +120,344 @@ def render_overview_page(df):
     st.markdown("<div style='height: 40px;'></div>", unsafe_allow_html=True)
     st.markdown("---")
     
-    # FILTRO DE COMUNA (NUEVO) CON NÚMEROS
+    # ============================
+    # TABLA RESUMEN GLOBAL
+    # ============================
+    st.markdown("<h2 style='text-align: center; color: #1a73e8; margin: 20px 0 30px 0;'>📋 RESUMEN GENERAL POR COMUNA Y ESTRATO</h2>", 
+                unsafe_allow_html=True)
+    
+    # Crear tabla resumen con todas las columnas solicitadas
+    if not df.empty and 'es_123' in df.columns:
+        summary_data = []
+        
+        # Primero agrupar por comuna
+        comunas_base = df['Comuna Base'].unique() if 'Comuna Base' in df.columns else []
+        
+        for comuna in comunas_base:
+            df_comuna = df[df['Comuna Base'] == comuna]
+            
+            # Obtener número de comuna
+            numero_comuna = get_comuna_numero(comuna)
+            
+            # Datos para estrato 1-3
+            df_123 = df_comuna[df_comuna['es_123'] == True]
+            if not df_123.empty:
+                usuarios_123_comuna = int(df_123['numero_usuarios_comuna'].sum())
+                presupuesto_total_123 = df_123['presupuesto_comuna'].sum()
+                presupuesto_consumido_123 = presupuesto_total_123 - df_123['restante_presupuesto_comuna'].sum()
+                presupuesto_restante_123 = df_123['restante_presupuesto_comuna'].sum()
+                
+                # Calcular porcentaje
+                porcentaje_123 = (presupuesto_consumido_123 / presupuesto_total_123 * 100) if presupuesto_total_123 > 0 else 0
+                
+                # Determinar estado usando función existente (de utils.py o cards.py)
+                estado_123 = _get_estado_utilizacion(porcentaje_123)
+                
+                summary_data.append({
+                    'Comuna': f"{numero_comuna} - {comuna}",
+                    'Grupo Estrato': '1-3',
+                    'Usuarios Legalizados': usuarios_123_comuna,
+                    'Presupuesto Total': presupuesto_total_123,
+                    'Presupuesto Consumido': presupuesto_consumido_123,
+                    'Presupuesto Restante': presupuesto_restante_123,
+                    '% Uso': porcentaje_123,
+                    'Estado Utilización': estado_123
+                })
+            
+            # Datos para estrato 4-6
+            df_456 = df_comuna[df_comuna['es_123'] == False]
+            if not df_456.empty:
+                usuarios_456_comuna = int(df_456['numero_usuarios_comuna'].sum())
+                presupuesto_total_456 = df_456['presupuesto_comuna'].sum()
+                presupuesto_consumido_456 = presupuesto_total_456 - df_456['restante_presupuesto_comuna'].sum()
+                presupuesto_restante_456 = df_456['restante_presupuesto_comuna'].sum()
+                
+                # Calcular porcentaje
+                porcentaje_456 = (presupuesto_consumido_456 / presupuesto_total_456 * 100) if presupuesto_total_456 > 0 else 0
+                
+                # Determinar estado usando función existente
+                estado_456 = _get_estado_utilizacion(porcentaje_456)
+                
+                summary_data.append({
+                    'Comuna': f"{numero_comuna} - {comuna}",
+                    'Grupo Estrato': '4-6',
+                    'Usuarios Legalizados': usuarios_456_comuna,
+                    'Presupuesto Total': presupuesto_total_456,
+                    'Presupuesto Consumido': presupuesto_consumido_456,
+                    'Presupuesto Restante': presupuesto_restante_456,
+                    '% Uso': porcentaje_456,
+                    'Estado Utilización': estado_456
+                })
+        
+        # Crear DataFrame
+        summary_df = pd.DataFrame(summary_data)
+        
+        # Ordenar por número de comuna
+        if not summary_df.empty:
+            summary_df['Numero'] = summary_df['Comuna'].apply(
+                lambda x: int(x.split(' - ')[0]) if x.split(' - ')[0].isdigit() else 999
+            )
+            summary_df = summary_df.sort_values(['Numero', 'Grupo Estrato'])
+            summary_df = summary_df.drop('Numero', axis=1)
+            
+            # Formatear valores para visualización
+            summary_df_display = summary_df.copy()
+            
+            # Formatear valores monetarios COMPLETOS (sin B, M, K)
+            for col in ['Presupuesto Total', 'Presupuesto Consumido', 'Presupuesto Restante']:
+                if col in summary_df_display.columns:
+                    summary_df_display[col] = summary_df_display[col].apply(lambda x: f"${x:,.0f}")
+            
+            # Formatear porcentaje
+            if '% Uso' in summary_df_display.columns:
+                summary_df_display['% Uso'] = summary_df_display['% Uso'].apply(lambda x: f"{x:.1f}%")
+            
+            # Aplicar estilos a la columna Estado Utilización
+            styled_df = summary_df_display.style.apply(
+                lambda x: [_apply_color_to_status(val) for val in x], 
+                subset=['Estado Utilización']
+            )
+            
+            # Mostrar tabla con st.dataframe con colores
+            st.dataframe(
+                styled_df,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    'Comuna': st.column_config.TextColumn('COMUNA', width='large'),
+                    'Grupo Estrato': st.column_config.TextColumn('GRUPO ESTRATO', width='small'),
+                    'Usuarios Legalizados': st.column_config.NumberColumn('USUARIOS LEGALIZADOS', format='%d'),
+                    'Presupuesto Total': st.column_config.TextColumn('PRESUPUESTO TOTAL'),
+                    'Presupuesto Consumido': st.column_config.TextColumn('PRESUPUESTO CONSUMIDO'),
+                    'Presupuesto Restante': st.column_config.TextColumn('PRESUPUESTO RESTANTE'),
+                    '% Uso': st.column_config.TextColumn('% USO', width='small'),
+                    'Estado Utilización': st.column_config.TextColumn('ESTADO UTILIZACIÓN')
+                }
+            )
+    
+    # Línea separadora
+    st.markdown("<div style='height: 40px;'></div>", unsafe_allow_html=True)
+    st.markdown("---")
+    
+    # ============================
+    # MÉTRICAS CLAVE - DESPUÉS DE LA TABLA
+    # ============================
+    st.markdown("<h2 style='text-align: center; color: #1a73e8; margin: 20px 0 30px 0;'>📊 RESUMEN GENERAL DE RECURSOS</h2>", 
+                unsafe_allow_html=True)
+    
+    # Calcular métricas generales
+    if 'presupuesto_comuna' in df.columns and 'restante_presupuesto_comuna' in df.columns:
+        presupuesto_total = df['presupuesto_comuna'].sum()
+        presupuesto_consumido = presupuesto_total - df['restante_presupuesto_comuna'].sum()
+        presupuesto_restante = df['restante_presupuesto_comuna'].sum()
+    else:
+        presupuesto_total = 0
+        presupuesto_consumido = 0
+        presupuesto_restante = 0
+    
+    total_usuarios = df['numero_usuarios_comuna'].sum() if 'numero_usuarios_comuna' in df.columns else 0
+    
+    # Crear 4 columnas para las métricas clave
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        # PRESUPUESTO TOTAL
+        st.markdown(f"""
+        <div style='
+            background: white;
+            border-radius: 15px;
+            padding: 25px 15px;
+            text-align: center;
+            border: 2px solid #1a73e8;
+            box-shadow: 0 4px 12px rgba(26, 115, 232, 0.1);
+            height: 180px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        '>
+            <div style='
+                font-size: 16px;
+                color: #5f6368;
+                font-weight: 700;
+                margin-bottom: 15px;
+            '>
+                💰 PRESUPUESTO TOTAL
+            </div>
+            <div style='
+                font-size: 28px;
+                color: #1a73e8;
+                font-weight: 900;
+                line-height: 1.2;
+                word-break: break-word;
+            '>
+                ${presupuesto_total:,.0f}
+            </div>
+            <div style='
+                font-size: 14px;
+                color: #80868b;
+                margin-top: 12px;
+            '>
+                Monto total asignado
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        # PRESUPUESTO OTORGADO (CONSUMIDO)
+        st.markdown(f"""
+        <div style='
+            background: white;
+            border-radius: 15px;
+            padding: 25px 15px;
+            text-align: center;
+            border: 2px solid #ea4335;
+            box-shadow: 0 4px 12px rgba(234, 67, 53, 0.1);
+            height: 180px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        '>
+            <div style='
+                font-size: 16px;
+                color: #5f6368;
+                font-weight: 700;
+                margin-bottom: 15px;
+            '>
+                📈 PRESUPUESTO OTORGADO
+            </div>
+            <div style='
+                font-size: 28px;
+                color: #ea4335;
+                font-weight: 900;
+                line-height: 1.2;
+                word-break: break-word;
+            '>
+                ${presupuesto_consumido:,.0f}
+            </div>
+            <div style='
+                font-size: 14px;
+                color: #80868b;
+                margin-top: 12px;
+            '>
+                Monto ya asignado
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        # PRESUPUESTO RESTANTE
+        st.markdown(f"""
+        <div style='
+            background: white;
+            border-radius: 15px;
+            padding: 25px 15px;
+            text-align: center;
+            border: 2px solid #34a853;
+            box-shadow: 0 4px 12px rgba(52, 168, 83, 0.1);
+            height: 180px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        '>
+            <div style='
+                font-size: 16px;
+                color: #5f6368;
+                font-weight: 700;
+                margin-bottom: 15px;
+            '>
+                📉 PRESUPUESTO RESTANTE
+            </div>
+            <div style='
+                font-size: 28px;
+                color: #34a853;
+                font-weight: 900;
+                line-height: 1.2;
+                word-break: break-word;
+            '>
+                ${presupuesto_restante:,.0f}
+            </div>
+            <div style='
+                font-size: 14px;
+                color: #80868b;
+                margin-top: 12px;
+            '>
+                Monto disponible
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col4:
+        # PORCENTAJE UTILIZADO
+        porcentaje_utilizado = (presupuesto_consumido / presupuesto_total * 100) if presupuesto_total > 0 else 0
+        
+        # Determinar color según porcentaje
+        if porcentaje_utilizado >= 90:
+            color_porcentaje = '#ea4335'  # Rojo
+            icono = '⚠️'
+            texto_estado = 'Crítico'
+        elif porcentaje_utilizado >= 70:
+            color_porcentaje = '#fbbc04'  # Amarillo/Naranja
+            icono = '📊'
+            texto_estado = 'Moderado'
+        elif porcentaje_utilizado >= 40:
+            color_porcentaje = '#34a853'  # Verde
+            icono = '✅'
+            texto_estado = 'Disponible'
+        else:
+            color_porcentaje = '#0d652d'  # Verde oscuro
+            icono = '🟢'
+            texto_estado = 'Muy disponible'
+        
+        st.markdown(f"""
+        <div style='
+            background: white;
+            border-radius: 15px;
+            padding: 25px 15px;
+            text-align: center;
+            border: 2px solid {color_porcentaje};
+            box-shadow: 0 4px 12px rgba(52, 168, 83, 0.1);
+            height: 180px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        '>
+            <div style='
+                font-size: 16px;
+                color: #5f6368;
+                font-weight: 700;
+                margin-bottom: 10px;
+            '>
+                {icono} % PRESUPUESTO UTILIZADO
+            </div>
+            <div style='
+                font-size: 42px;
+                color: {color_porcentaje};
+                font-weight: 900;
+                line-height: 1;
+            '>
+                {porcentaje_utilizado:.1f}%
+            </div>
+            <div style='
+                font-size: 14px;
+                color: #80868b;
+                margin-top: 12px;
+                padding: 4px 8px;
+                background-color: {color_porcentaje}15;
+                border-radius: 10px;
+                font-weight: 600;
+            '>
+                Estado: {texto_estado}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Línea separadora
+    st.markdown("<div style='height: 40px;'></div>", unsafe_allow_html=True)
+    st.markdown("---")
+    
+    # ============================
+    # FILTRO DE COMUNA Y TARJETAS
+    # ============================
     st.markdown("<h2 style='text-align: center; color: #1a73e8; margin: 20px 0 20px 0;'>🏘️ RECURSOS POR COMUNA</h2>", 
                 unsafe_allow_html=True)
     
@@ -175,7 +508,6 @@ def render_overview_page(df):
     # FILTRAR DATOS SEGÚN COMUNA SELECCIONADA
     if opciones_comuna and 'opcion_seleccionada' in locals() and comuna_seleccionada != "TODAS LAS COMUNAS":
         # Filtrar por comuna específica
-        # Asegurarse de que tenemos la columna Comuna Base
         if 'Comuna Base' not in df.columns and 'Nombre Comuna' in df.columns:
             df['Comuna Base'] = df['Nombre Comuna'].apply(
                 lambda x: str(x).split(' - ')[1] if ' - ' in str(x) else str(x)
@@ -238,3 +570,43 @@ def render_overview_page(df):
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+def _get_estado_utilizacion(porcentaje):
+    """
+    Determinar estado de utilización basado en porcentaje
+    Esta función debería usar la misma lógica que ya tienes implementada
+    en utils.py o cards.py
+    """
+    # Valores por defecto basados en tu imagen
+    if porcentaje >= 90:
+        return "POTENCIALMENTE AGOTADO"
+    elif porcentaje >= 70:
+        return "MODERADO"
+    elif porcentaje >= 40:
+        return "DISPONIBLE"
+    else:
+        return "MUY DISPONIBLE"
+
+def _get_color_for_status(status):
+    """
+    Obtener color para el estado de utilización
+    """
+    status = str(status).upper()
+    
+    if "POTENCIALMENTE AGOTADO" in status:
+        return '#ea4335'  # Rojo
+    elif "MODERADO" in status:
+        return '#fbbc04'  # Amarillo/Naranja
+    elif "DISPONIBLE" in status:
+        return '#34a853'  # Verde
+    elif "MUY DISPONIBLE" in status:
+        return '#0d652d'  # Verde oscuro
+    else:
+        return '#9aa0a6'  # Gris para otros casos
+
+def _apply_color_to_status(status):
+    """
+    Aplicar color al texto del estado
+    """
+    color = _get_color_for_status(status)
+    return f'background-color: {color}; color: white; font-weight: bold; border-radius: 10px; padding: 4px 8px; text-align: center;'
