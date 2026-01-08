@@ -883,26 +883,6 @@ def create_fiducias_grid(df, grupo_estrato="Todos"):
     </html>
     '''
     
-    # Mostrar estadísticas - VALORES ENTEROS
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        total_fiducias = len(df_filtrado['idfiducia'].unique()) if 'idfiducia' in df_filtrado.columns else 0
-        fiducias_123_count = len(df_123['idfiducia'].unique()) if 'idfiducia' in df_123.columns else 0
-        fiducias_456_count = len(df_456['idfiducia'].unique()) if 'idfiducia' in df_456.columns else 0
-        st.metric(
-            label="FIDUCIAS TOTALES",
-            value=total_fiducias,
-            delta=f"1-3: {fiducias_123_count} | 4-6: {fiducias_456_count}"
-        )
-    
-    with col2:
-        total_presupuesto = int(df_filtrado['presupuesto_comuna'].sum()) if not df_filtrado.empty else 0
-        st.metric("PRESUPUESTO TOTAL", format_currency_complete(total_presupuesto))
-    
-    with col3:
-        total_usuarios = int(df_filtrado['numero_usuarios_comuna'].sum()) if not df_filtrado.empty else 0
-        st.metric("LEGALIZADOS", f"{total_usuarios:,}")
-    
     # Mostrar el grid
     st.markdown("---")
     components.html(html_content, height=1200, scrolling=True)
