@@ -11,6 +11,47 @@ from app.utils import (
 )
 from app.components.cards import create_tv_cards_grid
 
+CUPOS_APROXIMADOS = {
+    # Formato: "NUMERO - COMUNA": {"1-3": cantidad, "4-6": cantidad}
+    "01 - POPULAR": {"1-3": 11, "4-6": "N.A"},
+    "02 - SANTA CRUZ": {"1-3": 19, "4-6": "N.A"},
+    "03 - MANRIQUE": {"1-3": 12, "4-6": "N.A"},
+    "04 - ARANJUEZ": {"1-3": 7, "4-6": "N.A"},
+    "05 - CASTILLA": {"1-3": 7, "4-6": "N.A"},
+    "06 - DOCE DE OCTUBRE": {"1-3": 7, "4-6": "N.A"},
+    "07 - ROBLEDO": {"1-3": 11, "4-6": 5},
+    "08 - VILLA HERMOSA": {"1-3": 12, "4-6": 5},
+    "09 - BUENOS AIRES": {"1-3": 7, "4-6": "N.A"},
+    "10 - LA CANDELARIA": {"1-3": 9, "4-6": 14},
+    "11 - LAURELES/ESTADIO": {"1-3": 3, "4-6": 18},
+    "12 - LA AMERICA": {"1-3": 10, "4-6": 10},
+    "13 - SAN JAVIER": {"1-3": 9, "4-6": "N.A"},
+    "14 - POBLADO": {"1-3": 10, "4-6": 9},
+    "15 - GUAYABAL": {"1-3": 12, "4-6": 12},
+    "16 - BELEN": {"1-3": 21, "4-6": 21},
+    "50 - SAN SEBASTIAN DE PALMITAS": {"1-3": 14, "4-6": "N.A"},
+    "60 - SAN CRISTOBAL": {"1-3": 7, "4-6": "N.A"},
+    "70 - ALTAVISTA": {"1-3": 7, "4-6": "N.A"},
+    "80 - SAN ANTONIO DE PRADO": {"1-3": 43, "4-6": "N.A"},
+    "90 - SANTA ELENA": {"1-3": 23, "4-6": 5},
+}
+
+def _get_cupos_aprox(comuna_con_numero, grupo_estrato):
+    """
+    Obtener cupos aproximados del mapeo
+    Args:
+        comuna_con_numero: "01 - POPULAR"
+        grupo_estrato: "1-3" o "4-6"
+    """
+    # Limpiar el string si tiene texto adicional
+    clave = comuna_con_numero
+    if " (Estrato" in clave:
+        clave = clave.split(" (Estrato")[0].strip()
+    
+    if clave in CUPOS_APROXIMADOS and grupo_estrato in CUPOS_APROXIMADOS[clave]:
+        return CUPOS_APROXIMADOS[clave][grupo_estrato]
+    return 0
+
 def render_overview_page(df):
     """Renderizar página con filtro de comuna"""
     st.markdown("<div style='height: 40px;'></div>", unsafe_allow_html=True)
@@ -152,11 +193,15 @@ def render_overview_page(df):
                 
                 # Determinar estado usando función existente (de utils.py o cards.py)
                 estado_123 = _get_estado_utilizacion(porcentaje_123)
+
+                comuna_con_numero = f"{numero_comuna} - {comuna}"
+                cupos_123 = _get_cupos_aprox(comuna_con_numero, '1-3')
                 
                 summary_data.append({
                     'Comuna': f"{numero_comuna} - {comuna}",
                     'Grupo Estrato': '1-3',
                     'Usuarios Legalizados': usuarios_123_comuna,
+                    'Cupos Aprox': cupos_123,
                     'Presupuesto Total': presupuesto_total_123,
                     'Presupuesto Consumido': presupuesto_consumido_123,
                     'Presupuesto Restante': presupuesto_restante_123,
@@ -177,11 +222,15 @@ def render_overview_page(df):
                 
                 # Determinar estado usando función existente
                 estado_456 = _get_estado_utilizacion(porcentaje_456)
+
+                comuna_con_numero = f"{numero_comuna} - {comuna}"
+                cupos_456 = _get_cupos_aprox(comuna_con_numero, '4-6')
                 
                 summary_data.append({
                     'Comuna': f"{numero_comuna} - {comuna}",
                     'Grupo Estrato': '4-6',
                     'Usuarios Legalizados': usuarios_456_comuna,
+                    'Cupos Aprox': cupos_456,
                     'Presupuesto Total': presupuesto_total_456,
                     'Presupuesto Consumido': presupuesto_consumido_456,
                     'Presupuesto Restante': presupuesto_restante_456,
@@ -227,6 +276,7 @@ def render_overview_page(df):
                     'Comuna': st.column_config.TextColumn('COMUNA', width='large'),
                     'Grupo Estrato': st.column_config.TextColumn('GRUPO ESTRATO', width='small'),
                     'Usuarios Legalizados': st.column_config.NumberColumn('USUARIOS LEGALIZADOS', format='%d'),
+                    'Cupos Aprox': st.column_config.NumberColumn('CUPOS APROX', format='%d'),
                     'Presupuesto Total': st.column_config.TextColumn('PRESUPUESTO TOTAL'),
                     'Presupuesto Consumido': st.column_config.TextColumn('PRESUPUESTO CONSUMIDO'),
                     'Presupuesto Restante': st.column_config.TextColumn('PRESUPUESTO RESTANTE'),
