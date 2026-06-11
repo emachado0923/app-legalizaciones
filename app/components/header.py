@@ -24,7 +24,7 @@ def render_header():
                      font-weight: 500;
                      margin: 5px 0 15px 0;
                      font-family: 'Roboto', sans-serif;">
-                Convocatoria 2026-1 | Agencia de Educación Postsecundaria de Medellín
+                Convocatoria 2026-2 | Agencia de Educación Postsecundaria de Medellín
             </p>
         </div>
     </div>

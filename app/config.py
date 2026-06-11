@@ -36,6 +36,7 @@ COMUNA_MAPPING = {
     "12123": "12 - LA AMERICA",
     "11123": "11 - LAURELES/ESTADIO",
     "10123": "10 - LA CANDELARIA",
+    "9456": "09 - BUENOS AIRES",
     "9123": "09 - BUENOS AIRES",
     "8123": "08 - VILLA HERMOSA",
     "7123": "07 - ROBLEDO",
@@ -46,7 +47,8 @@ COMUNA_MAPPING = {
     "3123": "03 - MANRIQUE",
     "2123": "02 - SANTA CRUZ",
     "1123": "01 - POPULAR",
-    "100234": "RECURSO ORDINARIO"
+    "100234": "RECURSO ORDINARIO",
+    "100235": "MEJORES DEPORTISTAS"
 }
 
 # Configuración de la aplicación
