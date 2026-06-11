@@ -45,7 +45,8 @@ COMUNA_MAPPING = {
     "4123": "04 - ARANJUEZ",
     "3123": "03 - MANRIQUE",
     "2123": "02 - SANTA CRUZ",
-    "1123": "01 - POPULAR"
+    "1123": "01 - POPULAR",
+    "100234": "RECURSO ORDINARIO"
 }
 
 # Configuración de la aplicación
@@ -54,6 +55,6 @@ APP_CONFIG = {
     'page_icon': '💰',
     'layout': 'wide',
     'table_name': 'callg_control_presupuesto_comuna_fidu',
-    'current_period': 15,
+    'current_period': 16,
     'cache_ttl': 60
 }

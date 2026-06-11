@@ -23,7 +23,7 @@ class Settings:
     APP_ICON = "💰"
     PAGE_LAYOUT = "wide"
     TABLE_NAME = "callg_control_presupuesto_comuna_fidu"
-    CURRENT_PERIOD = 15
+    CURRENT_PERIOD = 16
     CACHE_TTL = 60
     
     # Debug
