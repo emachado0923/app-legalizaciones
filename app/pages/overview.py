@@ -34,7 +34,7 @@ CUPOS_APROXIMADOS = {
     "70 - ALTAVISTA": {"1-3": 8, "4-6": "N.A"},
     "80 - SAN ANTONIO DE PRADO": {"1-3": 38, "4-6": "N.A"},
     "90 - SANTA ELENA": {"1-3": 17, "4-6": 2},
-    "00 - RECURSO ORDINARIO": {"1-4": 301},
+    "00 - RECURSO ORDINARIO": {"1-3": 301},
     "00 - MEJORES DEPORTISTAS": { "N.A":  "N.A"}
 }
 
