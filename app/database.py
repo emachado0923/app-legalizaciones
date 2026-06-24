@@ -66,7 +66,7 @@ class DatabaseManager:
             estado,
             nombre,
             fondo
-        FROM vw_callg_control_citas_con_historico
+        FROM vw_citas_PP_EPM_legalizacion
         WHERE nombre LIKE %s
         ORDER BY fecha DESC, hora_inicio DESC
         """
