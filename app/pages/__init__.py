@@ -1,8 +1,9 @@
-# app/pages/__init__.py
-from .overview import render_overview_page
-from .citas import render_citas_page    # Nueva página
+"""Páginas del dashboard Sapiencia."""
+
+from app.pages.citas import render_citas_page
+from app.pages.recurso_comunas import render_recurso_comunas_page
 
 __all__ = [
-    'render_overview_page',
-    'render_citas_page'
+    "render_citas_page",
+    "render_recurso_comunas_page",
 ]
