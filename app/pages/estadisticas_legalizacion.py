@@ -226,7 +226,12 @@ def _renderizar_beneficios(df: pd.DataFrame) -> None:
 
     beneficios_matricula = df[val_mat > 0]
     beneficios_sostenimiento = df[val_sos > 0]
-    beneficios_ambos = df[(val_mat > 0) & (val_sos > 0)]
+
+    # V5.2: totales agregados (suma de las dos tarjetas anteriores)
+    total_beneficios = len(beneficios_matricula) + len(beneficios_sostenimiento)
+    monto_total = int(beneficios_matricula["Valor_matricula"].sum()) + int(
+        beneficios_sostenimiento["Valor_sostenimiento"].sum()
+    )
 
     c1, c2, c3 = st.columns(3)
     with c1:
@@ -246,18 +251,18 @@ def _renderizar_beneficios(df: pd.DataFrame) -> None:
             "🏠",
         )
     with c3:
-        total_ambos = int(beneficios_ambos["Valor_matricula"].sum()) + int(beneficios_ambos["Valor_sostenimiento"].sum())
         render_tarjeta_metrica(
-            "MATRÍCULA Y SOSTENIMIENTO",
-            format_number_integer(len(beneficios_ambos)),
-            f"Total: {format_currency(total_ambos)}",
+            "TOTAL DE BENEFICIOS",
+            format_number_integer(total_beneficios),
+            f"Total: {format_currency(monto_total)}",
             SAPIENCIA_COLORS["magenta_primary"],
-            "🎯",
+            "📊",
         )
 
     st.caption(
-        "* Un beneficiario puede recibir ambos tipos de apoyo simultáneamente, "
-        "por lo que la suma puede superar el total de legalizados."
+        "* Matrícula y Sostenimiento cuentan los beneficiarios con ese tipo de apoyo "
+        "(un mismo beneficiario puede tener ambos). "
+        "Total de Beneficios es la suma de ambas tarjetas."
     )
 
 
