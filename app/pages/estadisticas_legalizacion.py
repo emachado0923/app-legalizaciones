@@ -210,34 +210,55 @@ def _renderizar_modalidades(df: pd.DataFrame) -> None:
 # Sección 4 — Tarjetas de beneficios entregados
 # ---------------------------------------------------------------------------
 def _renderizar_beneficios(df: pd.DataFrame) -> None:
-    """4 tarjetas: conteo y valor total por tipo de beneficio."""
+    """3 tarjetas: conteo y valor total por tipo de beneficio (INCLUSIVO).
+
+    V5.1: la lógica es INCLUSIVA — un beneficiario con matrícula y
+    sostenimiento cuenta en ambas tarjetas. La suma puede superar el total.
+    """
     st.markdown(
         f"<h3 style='color:{SAPIENCIA_COLORS['magenta_primary']};margin-top:16px;'>"
         "💳 Beneficios entregados</h3>",
         unsafe_allow_html=True,
     )
-    categorias = [
-        ("Solo Matrícula", "📘", "Valor_matricula"),
-        ("Solo Sostenimiento", "🏠", "Valor_sostenimiento"),
-        ("Matrícula y Sostenimiento", "🎯", None),
-        ("Sin beneficio económico", "📭", None),
-    ]
-    cols = st.columns(4)
-    for col, (label, icono, val_col) in zip(cols, categorias):
-        sub = df[df["clasificacion_beneficio"] == label]
-        conteo = len(sub)
-        if val_col:
-            valor = int(sub[val_col].sum())
-        else:
-            valor = int(sub.get("Valor_matricula", 0).sum()) + int(sub.get("Valor_sostenimiento", 0).sum())
-        with col:
-            render_tarjeta_metrica(
-                label.upper(),
-                format_number_integer(conteo),
-                f"Total: {format_currency(valor)}",
-                SAPIENCIA_COLORS["magenta_primary"],
-                icono,
-            )
+
+    val_mat = df.get("Valor_matricula", pd.Series(dtype=int))
+    val_sos = df.get("Valor_sostenimiento", pd.Series(dtype=int))
+
+    beneficios_matricula = df[val_mat > 0]
+    beneficios_sostenimiento = df[val_sos > 0]
+    beneficios_ambos = df[(val_mat > 0) & (val_sos > 0)]
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        render_tarjeta_metrica(
+            "MATRÍCULA",
+            format_number_integer(len(beneficios_matricula)),
+            f"Total: {format_currency(int(beneficios_matricula['Valor_matricula'].sum()))}",
+            SAPIENCIA_COLORS["magenta_primary"],
+            "📘",
+        )
+    with c2:
+        render_tarjeta_metrica(
+            "SOSTENIMIENTO",
+            format_number_integer(len(beneficios_sostenimiento)),
+            f"Total: {format_currency(int(beneficios_sostenimiento['Valor_sostenimiento'].sum()))}",
+            SAPIENCIA_COLORS["magenta_primary"],
+            "🏠",
+        )
+    with c3:
+        total_ambos = int(beneficios_ambos["Valor_matricula"].sum()) + int(beneficios_ambos["Valor_sostenimiento"].sum())
+        render_tarjeta_metrica(
+            "MATRÍCULA Y SOSTENIMIENTO",
+            format_number_integer(len(beneficios_ambos)),
+            f"Total: {format_currency(total_ambos)}",
+            SAPIENCIA_COLORS["magenta_primary"],
+            "🎯",
+        )
+
+    st.caption(
+        "* Un beneficiario puede recibir ambos tipos de apoyo simultáneamente, "
+        "por lo que la suma puede superar el total de legalizados."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -272,9 +293,10 @@ def _grafico_barras_fondo(df: pd.DataFrame) -> None:
     fig = px.bar(
         agg, x="conteo", y="fondo_display", orientation="h",
         title="Legalizados por Fondo", text="conteo",
+        labels={"fondo_display": "Fondo", "conteo": "Beneficiarios"},  # V5.1
     )
     fig.update_traces(marker_color=SAPIENCIA_COLORS["magenta_primary"], textposition="outside")
-    fig.update_yaxes(title_text="")
+    fig.update_yaxes(title_text="Fondo")  # V5.1: sustituir "fondo_display" técnico
     fig.update_xaxes(title_text="Beneficiarios")
     _mostrar_o_vacio(_aplicar_tema(fig), agg)
 
@@ -334,6 +356,7 @@ def _grafico_barras_comuna_pp(df: pd.DataFrame) -> None:
         agg, x="Comuna_de_residencia", y="conteo",
         color="grupo_estrato",
         title="Legalizados PP por Comuna y Estrato",
+        text="conteo",  # V5.1: mostrar valor numérico en cada barra
         color_discrete_map={
             "1-3": SAPIENCIA_COLORS["magenta_primary"],
             "4-6": SAPIENCIA_COLORS["magenta_dark"],
@@ -342,6 +365,12 @@ def _grafico_barras_comuna_pp(df: pd.DataFrame) -> None:
         category_orders={"Comuna_de_residencia": orden_comunas},
         barmode="group",
     )
+    fig.update_traces(
+        textposition="outside",
+        textfont=dict(size=11, color=SAPIENCIA_COLORS["gray_dark"]),
+        cliponaxis=False,
+    )
+    fig.update_layout(uniformtext_minsize=9, uniformtext_mode="hide")
     fig.update_xaxes(title_text="", tickangle=-45)
     fig.update_yaxes(title_text="Beneficiarios")
     _mostrar_o_vacio(_aplicar_tema(fig), agg)
