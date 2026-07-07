@@ -181,8 +181,12 @@ def _renderizar_resumen_usuarios(df: pd.DataFrame) -> None:
 # ---------------------------------------------------------------------------
 # CORRECCIÓN V2.2: dropdowns para filtrar tarjetas por fondo y comuna
 # ---------------------------------------------------------------------------
-def _opciones_comuna_para_dropdown(df: pd.DataFrame) -> tuple[list[str], dict[str, Any]]:
-    """Devuelve (etiquetas_display ordenadas, mapa_display_a_codigo).
+def _opciones_comuna_para_dropdown(df: pd.DataFrame) -> tuple[list[str], dict[str, list[Any]]]:
+    """Devuelve (etiquetas_display ordenadas, mapa_display_a_lista_de_codigos).
+
+    V5: agrupa TODOS los códigos que apuntan a la misma etiqueta bajo una
+    sola entrada. Ej: en PP, la comuna 07 - ROBLEDO tiene los códigos 7123
+    y 7456 (estratos 1-3 y 4-6); ambos se agrupan bajo "07 - ROBLEDO".
 
     Resuelve la etiqueta humana en este orden:
     1. `normalizar_nombre_comuna(codigo)` para códigos especiales (EFE, FA, MD).
@@ -192,9 +196,7 @@ def _opciones_comuna_para_dropdown(df: pd.DataFrame) -> tuple[list[str], dict[st
     if "comuna" not in df.columns:
         return [], {}
 
-    display_a_codigo: dict[str, Any] = {}
-    items: list[tuple[int, str]] = []  # (orden, etiqueta)
-
+    display_a_codigos: dict[str, list[Any]] = {}
     for codigo in df["comuna"].dropna().unique().tolist():
         # 1) Mapeo especial
         etiqueta = normalizar_nombre_comuna(codigo)
@@ -203,25 +205,16 @@ def _opciones_comuna_para_dropdown(df: pd.DataFrame) -> tuple[list[str], dict[st
             fila = df[df["comuna"] == codigo]["Nombre Comuna"]
             if not fila.empty:
                 etiqueta = str(fila.iloc[0])
-        # Resolver duplicados (varios códigos pueden mapear al mismo nombre)
-        clave_display = etiqueta
-        sufijo = 2
-        while clave_display in display_a_codigo:
-            clave_display = f"{etiqueta} ({codigo})"
-            sufijo += 1
-        display_a_codigo[clave_display] = codigo
+        # V5: agrupar múltiples códigos bajo la misma etiqueta (no crear sufijos)
+        display_a_codigos.setdefault(str(etiqueta), []).append(codigo)
 
-        # Clave de orden numérica si la etiqueta empieza con "NN - "
-        try:
-            prefijo = clave_display.split(" - ", 1)[0]
-            orden = int(prefijo) if prefijo.isdigit() else 9999
-        except (ValueError, IndexError):
-            orden = 9999
-        items.append((orden, clave_display))
+    # Ordenar por prefijo numérico "NN - " cuando aplique
+    def _orden(etq: str) -> tuple[int, str]:
+        prefijo = etq.split(" - ", 1)[0]
+        return (int(prefijo) if prefijo.isdigit() else 9999, etq)
 
-    items.sort(key=lambda x: (x[0], x[1]))
-    etiquetas = [e for _, e in items]
-    return etiquetas, display_a_codigo
+    etiquetas = sorted(display_a_codigos.keys(), key=_orden)
+    return etiquetas, display_a_codigos
 
 
 def _seccion_tarjetas_por_fondo(df: pd.DataFrame) -> None:
@@ -263,14 +256,16 @@ def _seccion_tarjetas_por_fondo(df: pd.DataFrame) -> None:
             key="filtro_comuna_tarjetas",
             help="Filtra las tarjetas a una comuna específica.",
         )
-        comuna_codigo = mapa_comuna.get(comuna_display, "Todas") if comuna_display != "Todas" else "Todas"
 
     # --- Aplicar filtros ---
     df_tarjetas = df.copy()
     if fuente_seleccionada != "Todas":
         df_tarjetas = df_tarjetas[df_tarjetas["fuente_financiacion"] == fuente_seleccionada]
-    if comuna_codigo != "Todas":
-        df_tarjetas = df_tarjetas[df_tarjetas["comuna"].astype(str) == str(comuna_codigo)]
+    if comuna_display != "Todas":
+        # V5: una etiqueta agrupa varios códigos (ej. ROBLEDO → 7123 + 7456)
+        codigos = [str(c) for c in mapa_comuna.get(comuna_display, [])]
+        if codigos:
+            df_tarjetas = df_tarjetas[df_tarjetas["comuna"].astype(str).isin(codigos)]
 
     if df_tarjetas.empty:
         st.info("📭 No hay datos para la combinación seleccionada.")
@@ -315,65 +310,59 @@ def _seccion_tarjetas_por_fondo(df: pd.DataFrame) -> None:
 
         st.subheader(f"📦 {fondo}")
 
-        # Ordenar comunas dentro del fondo por su número (si es numérico)
-        codigos_comuna = df_fondo["comuna"].dropna().unique().tolist()
+        # V5.9: iterar por DISPLAY NAME (deduplicado), no por código raw.
+        # Esto evita que ROBLEDO aparezca dos veces cuando la BD tiene 7123 y 7456.
+        etiquetas_ordenadas, mapa_display_codes = _opciones_comuna_para_dropdown(df_fondo)
 
-        def _orden_codigo(codigo: Any) -> tuple[int, str]:
-            etiqueta = normalizar_nombre_comuna(codigo)
-            if str(etiqueta) == str(codigo) and "Nombre Comuna" in df_fondo.columns:
-                fila = df_fondo[df_fondo["comuna"] == codigo]["Nombre Comuna"]
-                if not fila.empty:
-                    etiqueta = str(fila.iloc[0])
-            prefijo = str(etiqueta).split(" - ", 1)[0]
-            return (int(prefijo) if prefijo.isdigit() else 9999, str(etiqueta))
-
-        codigos_comuna_ordenados = sorted(codigos_comuna, key=_orden_codigo)
+        def _orden_rango(r: Any) -> int:
+            if r == "1-3":
+                return 0
+            if r == "4-6":
+                return 1
+            return 2
 
         primera_comuna = True
-        for codigo_comuna in codigos_comuna_ordenados:
+        for display_name in etiquetas_ordenadas:
+            codigos = mapa_display_codes.get(display_name, [])
+            if not codigos:
+                continue
+
+            df_comuna = df_fondo[df_fondo["comuna"].isin(codigos)]
+            if df_comuna.empty:
+                continue
+
             if not primera_comuna:
                 st.divider()
             primera_comuna = False
 
-            df_comuna = df_fondo[df_fondo["comuna"] == codigo_comuna]
-
-            # Etiqueta humana para la comuna
-            etiqueta = normalizar_nombre_comuna(codigo_comuna)
-            if str(etiqueta) == str(codigo_comuna) and "Nombre Comuna" in df_comuna.columns:
-                etiqueta = str(df_comuna["Nombre Comuna"].iloc[0])
-
-            # Separar número (si hay) y nombre
-            if " - " in str(etiqueta):
-                numero_str, nombre_str = str(etiqueta).split(" - ", 1)
+            # Separar número y nombre a partir del display "NN - NOMBRE"
+            if " - " in display_name:
+                numero_str, nombre_str = display_name.split(" - ", 1)
                 if not numero_str.isdigit():
-                    numero_str, nombre_str = "", str(etiqueta)
+                    numero_str, nombre_str = "", display_name
             else:
-                numero_str, nombre_str = "", str(etiqueta)
+                numero_str, nombre_str = "", display_name
 
-            # Estratos disponibles para esta comuna en este fondo
+            # Estratos presentes en el conjunto (uno o varios si se agruparon códigos)
             if "estrato_rango" in df_comuna.columns:
                 rangos = df_comuna["estrato_rango"].unique().tolist()
             else:
                 rangos = [None]
 
-            # Orden: 1-3 primero, luego 4-6, luego None (posgrados / RO)
-            def _orden_rango(r: Any) -> int:
-                if r == "1-3":
-                    return 0
-                if r == "4-6":
-                    return 1
-                return 2
-
             rangos_ordenados = sorted(rangos, key=_orden_rango)
 
             for estrato_rango_valor in rangos_ordenados:
+                # Filtrar el subset por rango para calcular métricas por panel
+                if pd.isna(estrato_rango_valor):
+                    df_estrato = df_comuna[df_comuna["estrato_rango"].isna()] \
+                        if "estrato_rango" in df_comuna.columns else df_comuna
+                else:
+                    df_estrato = df_comuna[df_comuna["estrato_rango"] == estrato_rango_valor]
+
+                # V5.9: reagrupamos usando el df ya filtrado por (display+rango) para
+                # que sume TODOS los códigos que apuntan al mismo display.
                 datos = agrupar_para_resumen_estrato(
-                    df_comuna,
-                    {
-                        "fondo": fondo,
-                        "comuna": codigo_comuna,
-                        "estrato_rango": estrato_rango_valor,
-                    },
+                    df_estrato, {"fondo": fondo, "estrato_rango": estrato_rango_valor},
                 )
                 if datos["presupuesto_total"] == 0 and datos["legalizados"] == 0 and not datos["fiducias"]:
                     continue

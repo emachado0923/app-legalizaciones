@@ -111,3 +111,16 @@ def fetch_citas() -> pd.DataFrame:
     """
     rows = fetch_query(query)
     return pd.DataFrame(rows)
+
+
+# V5.10: nueva página Estadísticas Legalización
+def fetch_giros_informe(convocatoria: str = "2026-2") -> pd.DataFrame:
+    """Trae los registros de la vista `vw_giros_informe_total` filtrados por convocatoria.
+
+    Columnas clave usadas por la página:
+        fondo, Tipo_solicitud_definitiva, Comuna_de_residencia, Estrato,
+        Valor_matricula, Valor_sostenimiento, Pagare, IES, Programa_academico.
+    """
+    query = "SELECT * FROM vw_giros_informe_total WHERE Convocatoria = %s"
+    rows = fetch_query(query, (convocatoria,))
+    return pd.DataFrame(rows)

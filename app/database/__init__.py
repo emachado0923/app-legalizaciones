@@ -12,6 +12,7 @@ from app.database.connector import (
     fetch_query,
     fetch_presupuesto_comuna,
     fetch_citas,
+    fetch_giros_informe,
     DatabaseError,
 )
 
@@ -20,5 +21,6 @@ __all__ = [
     "fetch_query",
     "fetch_presupuesto_comuna",
     "fetch_citas",
+    "fetch_giros_informe",
     "DatabaseError",
 ]

@@ -28,3 +28,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# V5.11: scripts locales con credenciales embebidas
+run_local.sh
+run_local.bat

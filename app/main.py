@@ -18,7 +18,11 @@ import streamlit as st
 
 from app.components.header import render_control_bar, render_header
 from app.config import SAPIENCIA_COLORS, inject_global_css, settings
-from app.pages import render_citas_page, render_recurso_comunas_page
+from app.pages import (
+    render_citas_page,
+    render_estadisticas_legalizacion,
+    render_recurso_comunas_page,
+)
 from app.utils import format_colombia_time, get_colombia_time
 
 
@@ -78,6 +82,18 @@ def _render_sidebar() -> None:
             st.session_state.current_page = "citas"
             st.rerun()
 
+        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+
+        # V5.10: nueva página de estadísticas de legalización
+        if st.button(
+            "📊 ESTADÍSTICAS LEGALIZACIÓN",
+            use_container_width=True,
+            type="primary" if current_page == "estadisticas" else "secondary",
+            key="btn_estadisticas",
+        ):
+            st.session_state.current_page = "estadisticas"
+            st.rerun()
+
         st.markdown("---")
 
         # Pie del sidebar con versión y última actualización
@@ -122,7 +138,7 @@ def main() -> None:
     # Sidebar de navegación
     _render_sidebar()
 
-    # Contenido principal
+    # Contenido principal (V5.10: dispatch a 3 páginas)
     if st.session_state.current_page == "dashboard":
         render_header()
         auto_refresh = render_control_bar(
@@ -130,6 +146,8 @@ def main() -> None:
         )
         st.session_state.auto_refresh = auto_refresh
         render_recurso_comunas_page()
+    elif st.session_state.current_page == "estadisticas":
+        render_estadisticas_legalizacion()
     else:
         render_citas_page()
 
