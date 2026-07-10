@@ -193,7 +193,7 @@ def _renderizar_modalidades(df: pd.DataFrame) -> None:
     """3 tarjetas: conteo por Tipo_solicitud_definitiva."""
     st.markdown(
         f"<h3 style='color:{SAPIENCIA_COLORS['magenta_primary']};margin-top:16px;'>"
-        "🧾 Distribución por modalidad</h3>",
+        "🧾 Distribución de legalizados por modalidad</h3>",
         unsafe_allow_html=True,
     )
     c1, c2, c3 = st.columns(3)
