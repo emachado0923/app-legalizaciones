@@ -23,7 +23,10 @@ from app.components.cards import (
     render_tarjeta_legalizados_segmento,
     render_tarjeta_metrica,
 )
-from app.components.tables import render_tabla_resumen_general
+from app.components.tables import (
+    render_multiselect_fondos_resumen,  # V6.13
+    render_tabla_resumen_general,
+)
 from app.config import (
     CONFIGURACION_ESTRATOS_FONDOS,
     SAPIENCIA_COLORS,
@@ -74,6 +77,17 @@ SEGMENTOS_LEGALIZADOS: List[Dict[str, Any]] = [
     },
     {"clave_filtro": {"fondo": "FORMACION AVANZADA"}, "label": "FORMACIÓN\nAVANZADA", "icono": "🏆"},
     {"clave_filtro": {"fondo": "MEJORES DEPORTISTAS"}, "label": "MEJORES\nDEPORTISTAS", "icono": "⚽"},
+    # V6.15: ENLAZA MUNDOS (dos tarjetas: PP y RO)
+    {
+        "clave_filtro": {"fuente": "PRESUPUESTO PARTICIPATIVO", "fondo": "ENLAZA MUNDOS"},
+        "label": "ENLAZA\nMUNDOS PP",
+        "icono": "✈️",
+    },
+    {
+        "clave_filtro": {"fuente": "RECURSO ORDINARIO", "fondo": "ENLAZA MUNDOS"},
+        "label": "ENLAZA\nMUNDOS RO",
+        "icono": "🌐",
+    },
 ]
 
 
@@ -398,34 +412,46 @@ def _fragmento_datos_en_vivo() -> None:
         st.warning("⚠️ No se encontraron datos para el periodo actual.")
         return
 
-    # 1. USUARIOS LEGALIZADOS — total + tarjetas segmentadas (CORRECCIÓN V2.4)
-    _renderizar_resumen_usuarios(df)
-    st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
-    st.markdown("---")
-
-    # 2. TABLA RESUMEN GENERAL POR COMUNA Y ESTRATO (CORRECCIÓN V2.1)
+    # V6.13: filtro global de fondos que alimenta USUARIOS LEGALIZADOS,
+    # TABLA RESUMEN y RESUMEN GENERAL DE RECURSOS. Las tarjetas dinámicas
+    # por fondo (sección 4) mantienen sus propios dropdowns.
     st.markdown(
-        f"<h2 style='text-align: center; color: {magenta}; margin: 16px 0 20px 0;'>"
+        f"<h2 style='text-align: center; color: {magenta}; margin: 8px 0 12px 0;'>"
         "📋 RESUMEN GENERAL POR COMUNA Y ESTRATO</h2>",
         unsafe_allow_html=True,
     )
-    render_tabla_resumen_general(df, mostrar_filtro=True)
+    df_filtrado = render_multiselect_fondos_resumen(df, key="filtro_fondos_resumen_global")
+
+    if df_filtrado.empty:
+        st.info("📭 Ningún registro cumple los filtros seleccionados.")
+        return
+
+    st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+
+    # 1. USUARIOS LEGALIZADOS — total + tarjetas segmentadas (usa filtro V6.13)
+    _renderizar_resumen_usuarios(df_filtrado)
+    st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+    st.markdown("---")
+
+    # 2. TABLA RESUMEN GENERAL (usa el mismo df_filtrado; multiselect ya renderizado)
+    render_tabla_resumen_general(df_filtrado, mostrar_filtro=False)
 
     st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
     st.markdown("---")
 
-    # 3. MÉTRICAS CLAVE (siempre globales)
+    # 3. MÉTRICAS CLAVE (V6.13: usa el mismo df_filtrado, ya no son globales fijos)
     st.markdown(
         f"<h2 style='text-align: center; color: {magenta}; margin: 16px 0 20px 0;'>"
         "📊 RESUMEN GENERAL DE RECURSOS</h2>",
         unsafe_allow_html=True,
     )
-    _renderizar_metricas_clave(df)
+    _renderizar_metricas_clave(df_filtrado)
 
     st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
     st.markdown("---")
 
-    # 4. TARJETAS DINÁMICAS POR FONDO con filtros fuente + comuna (CORRECCIÓN V2.2)
+    # 4. TARJETAS DINÁMICAS POR FONDO con filtros fuente + comuna
+    #    Mantiene sus propios dropdowns; parte del df completo (no filtrado).
     _seccion_tarjetas_por_fondo(df)
 
     # 5. Pie de página

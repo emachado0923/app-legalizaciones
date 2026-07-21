@@ -211,6 +211,41 @@ CONFIGURACION_ESTRATOS_FONDOS: Dict[str, Dict[str, Any]] = {
             {"label": "Estratos 1 - 6", "estratos": [1, 2, 3, 4, 5, 6]},
         ],
     },
+    # V6.12: ENLAZA MUNDOS RO — 4 modalidades (Pasantía / Doble Titulación / Doctorado / Maestría)
+    "ENLAZA MUNDOS - RECURSO ORDINARIO": {
+        "tipo": "posgrado_internacional",
+        "modalidades": {
+            "2214561": "Pasantía",
+            "2214562": "Doble Titulación",
+            "2214563": "Doctorado",
+            "2214564": "Maestría",
+        },
+        "tarjetas": [
+            {"label": "Estratos 1 - 6", "estratos": [1, 2, 3, 4, 5, 6]},
+        ],
+    },
+    # V6.12: ENLAZA MUNDOS PP — códigos = [prefijo_modalidad][id_comuna]
+    "ENLAZA MUNDOS - PRESUPUESTO PARTICIPATIVO": {
+        "tipo": "posgrado_internacional",
+        "comunas_priorizan": [
+            "4 - ARANJUEZ",
+            "7 - ROBLEDO",
+            "13 - SAN JAVIER",
+            "16 - BELEN",
+            "50 - SAN SEBASTIAN DE PALMITAS",
+            "80 - SAN ANTONIO DE PRADO",
+            "90 - SANTA ELENA",
+        ],
+        "modalidades": {
+            "2214561": "Pasantía",
+            "2214562": "Doble Titulación",
+            "2214563": "Doctorado",
+            "2214564": "Maestría",
+        },
+        "tarjetas": [
+            {"label": "Estratos 1 - 6", "estratos": [1, 2, 3, 4, 5, 6]},
+        ],
+    },
 }
 
 
@@ -222,6 +257,7 @@ OPCIONES_FILTRO_FONDOS: List[str] = [
     "FORMACIÓN AVANZADA",
     "EXTENDIENDO FRONTERAS",
     "MEJORES DEPORTISTAS",
+    "ENLAZA MUNDOS",  # V6.12
 ]
 
 # Cada opción del multiselect se traduce a una lista de valores reales de
@@ -235,6 +271,11 @@ MAPEO_FILTRO_A_FONDOS: Dict[str, List[str]] = {
         "EXTENDIENDO FRONTERAS - PRESUPUESTO PARTICIPATIVO",
     ],
     "MEJORES DEPORTISTAS": ["MEJORES DEPORTISTAS"],
+    # V6.12: ENLAZA MUNDOS agrupa RO + PP
+    "ENLAZA MUNDOS": [
+        "ENLAZA MUNDOS - RECURSO ORDINARIO",
+        "ENLAZA MUNDOS - PRESUPUESTO PARTICIPATIVO",
+    ],
 }
 
 
@@ -272,6 +313,53 @@ MAPA_COMUNAS_ESPECIALES: Dict[str, str] = {
     "22045690": "90 - SANTA ELENA (EFE)",
     # MEJORES DEPORTISTAS también tiene su propio código
     "100235": "MEJORES DEPORTISTAS",
+    # V6.12: ENLAZA MUNDOS RO — 4 modalidades (códigos base sin id_comuna)
+    "2214561": "ENLAZA MUNDOS - Pasantía (RO)",
+    "2214562": "ENLAZA MUNDOS - Doble Titulación (RO)",
+    "2214563": "ENLAZA MUNDOS - Doctorado (RO)",
+    "2214564": "ENLAZA MUNDOS - Maestría (RO)",
+}
+
+
+# ---------------------------------------------------------------------------
+# V6.12: Mapa id numérico → nombre de comuna legible
+# Usado por normalizar_nombre_comuna() al reconocer el patrón
+# ENLAZA MUNDOS PP: [prefijo_modalidad][id_comuna]
+# ---------------------------------------------------------------------------
+MAPA_ID_COMUNA: Dict[str, str] = {
+    "1": "1 - POPULAR",
+    "2": "2 - SANTA CRUZ",
+    "3": "3 - MANRIQUE",
+    "4": "4 - ARANJUEZ",
+    "5": "5 - CASTILLA",
+    "6": "6 - DOCE DE OCTUBRE",
+    "7": "7 - ROBLEDO",
+    "8": "8 - VILLA HERMOSA",
+    "9": "9 - BUENOS AIRES",
+    "10": "10 - LA CANDELARIA",
+    "11": "11 - LAURELES/ESTADIO",
+    "12": "12 - LA AMERICA",
+    "13": "13 - SAN JAVIER",
+    "14": "14 - POBLADO",
+    "15": "15 - GUAYABAL",
+    "16": "16 - BELEN",
+    "50": "50 - SAN SEBASTIAN DE PALMITAS",
+    "60": "60 - SAN CRISTOBAL",
+    "70": "70 - ALTAVISTA",
+    "80": "80 - SAN ANTONIO DE PRADO",
+    "90": "90 - SANTA ELENA",
+}
+
+
+# ---------------------------------------------------------------------------
+# V6.12: prefijos de modalidad de ENLAZA MUNDOS (RO usa el código completo,
+# PP concatena `id_comuna` después del prefijo).
+# ---------------------------------------------------------------------------
+PREFIJOS_ENLAZA_MUNDOS: Dict[str, str] = {
+    "2214561": "Pasantía",
+    "2214562": "Doble Titulación",
+    "2214563": "Doctorado",
+    "2214564": "Maestría",
 }
 
 
@@ -294,6 +382,17 @@ def normalizar_nombre_comuna(codigo_o_nombre: Any) -> str:
     # 1. Coincidencia directa por código exacto
     if codigo in MAPA_COMUNAS_ESPECIALES:
         return MAPA_COMUNAS_ESPECIALES[codigo]
+
+    # V6.12: ENLAZA MUNDOS PP — patrón `[prefijo_modalidad_7digitos][id_comuna]`
+    # Ej: 22145614 → 2214561 (Pasantía) + 4 (Aranjuez)
+    #     221456113 → 2214561 (Pasantía) + 13 (San Javier)
+    match_em = re.match(r"^(221456\d)(\d+)$", codigo)
+    if match_em:
+        prefijo = match_em.group(1)
+        id_comuna = match_em.group(2)
+        modalidad = PREFIJOS_ENLAZA_MUNDOS.get(prefijo, "Enlaza Mundos")
+        nombre_com = MAPA_ID_COMUNA.get(id_comuna, f"Comuna {id_comuna}")
+        return f"{nombre_com} - EM {modalidad} (PP)"
 
     # 2. Extraer número de 5+ dígitos del texto
     match = re.search(r"(\d{5,})", codigo)
@@ -360,3 +459,110 @@ def obtener_cupos_aprox(comuna_con_numero: Any, rango: Any) -> int:
         return int(valor)
     except (ValueError, TypeError):
         return 0
+
+
+# ---------------------------------------------------------------------------
+# V6.14: Cupos aproximados por fondo+fuente+comuna (convocatoria 2026-2)
+# ---------------------------------------------------------------------------
+CUPOS_RO: Dict[str, int] = {
+    "EXTENDIENDO FRONTERAS": 50,
+    "ENLAZA MUNDOS": 50,
+    "FORMACION AVANZADA": 50,
+    "MEJORES DEPORTISTAS": 40,
+    "LINEA PREGRADO RO": 301,
+}
+
+CUPOS_PP_EXTENDIENDO_FRONTERAS: Dict[str, int] = {
+    "1 - POPULAR": 11,
+    "2 - SANTA CRUZ": 12,
+    "3 - MANRIQUE": 0,
+    "4 - ARANJUEZ": 14,
+    "5 - CASTILLA": 11,
+    "6 - DOCE DE OCTUBRE": 11,
+    "7 - ROBLEDO": 12,
+    "8 - VILLA HERMOSA": 11,
+    "9 - BUENOS AIRES": 11,
+    "10 - LA CANDELARIA": 11,
+    "11 - LAURELES/ESTADIO": 12,
+    "12 - LA AMERICA": 11,
+    "13 - SAN JAVIER": 11,
+    "14 - POBLADO": 11,
+    "15 - GUAYABAL": 4,
+    "16 - BELEN": 13,
+    "50 - SAN SEBASTIAN DE PALMITAS": 14,
+    "60 - SAN CRISTOBAL": 11,
+    "70 - ALTAVISTA": 17,
+    "80 - SAN ANTONIO DE PRADO": 11,
+    "90 - SANTA ELENA": 20,
+}
+
+CUPOS_PP_ENLAZA_MUNDOS: Dict[str, int] = {
+    "1 - POPULAR": 0,
+    "2 - SANTA CRUZ": 0,
+    "3 - MANRIQUE": 0,
+    "4 - ARANJUEZ": 7,
+    "5 - CASTILLA": 0,
+    "6 - DOCE DE OCTUBRE": 0,
+    "7 - ROBLEDO": 2,
+    "8 - VILLA HERMOSA": 0,
+    "9 - BUENOS AIRES": 0,
+    "10 - LA CANDELARIA": 0,
+    "11 - LAURELES/ESTADIO": 0,
+    "12 - LA AMERICA": 0,
+    "13 - SAN JAVIER": 10,
+    "14 - POBLADO": 0,
+    "15 - GUAYABAL": 0,
+    "16 - BELEN": 5,
+    "50 - SAN SEBASTIAN DE PALMITAS": 5,
+    "60 - SAN CRISTOBAL": 0,
+    "70 - ALTAVISTA": 0,
+    "80 - SAN ANTONIO DE PRADO": 22,
+    "90 - SANTA ELENA": 5,
+}
+
+
+def resolver_cupos(fondo: Any, fuente: Any, comuna_normalizada: Any) -> int:
+    """Devuelve los cupos aproximados para (fondo, fuente, comuna).
+
+    - fondo: nombre del fondo (ej. "EXTENDIENDO FRONTERAS", "ENLAZA MUNDOS",
+      "FORMACION AVANZADA", "MEJORES DEPORTISTAS", "PRESUPUESTO PARTICIPATIVO",
+      "RECURSO ORDINARIO"). Puede venir con sufijos tipo " - RECURSO ORDINARIO".
+    - fuente: "RECURSO ORDINARIO" | "PRESUPUESTO PARTICIPATIVO".
+    - comuna_normalizada: nombre legible (ej. "07 - ROBLEDO", "4 - ARANJUEZ (EFE)").
+      Se admite con o sin cero inicial en el número.
+    Retorna 0 si no hay match.
+    """
+    if not fondo or not fuente:
+        return 0
+
+    fondo_u = str(fondo).upper()
+    fuente_u = str(fuente).upper()
+
+    if fuente_u == "RECURSO ORDINARIO":
+        if "EXTENDIENDO FRONTERAS" in fondo_u:
+            return CUPOS_RO.get("EXTENDIENDO FRONTERAS", 0)
+        if "ENLAZA MUNDOS" in fondo_u:
+            return CUPOS_RO.get("ENLAZA MUNDOS", 0)
+        if "FORMACION AVANZADA" in fondo_u or "FORMACIÓN AVANZADA" in fondo_u:
+            return CUPOS_RO.get("FORMACION AVANZADA", 0)
+        if "MEJORES DEPORTISTAS" in fondo_u:
+            return CUPOS_RO.get("MEJORES DEPORTISTAS", 0)
+        # Pregrado RO (PUAP / LINEA PREGRADO)
+        return CUPOS_RO.get("LINEA PREGRADO RO", 0)
+
+    if fuente_u == "PRESUPUESTO PARTICIPATIVO":
+        # Reducir a "N - NOMBRE" quitando cualquier sufijo (EFE, EM Pasantía, etc.)
+        raw = str(comuna_normalizada or "").split(" (")[0].strip()
+        partes = [p.strip() for p in raw.split(" - ") if p.strip()]
+        if len(partes) >= 2:
+            prefijo_num = partes[0].lstrip("0") or "0"
+            # Aceptamos que el nombre pueda contener "/" o espacios (ej. LAURELES/ESTADIO)
+            nombre_base = f"{prefijo_num} - {partes[1]}"
+        else:
+            nombre_base = raw
+        if "EXTENDIENDO FRONTERAS" in fondo_u:
+            return CUPOS_PP_EXTENDIENDO_FRONTERAS.get(nombre_base, 0)
+        if "ENLAZA MUNDOS" in fondo_u:
+            return CUPOS_PP_ENLAZA_MUNDOS.get(nombre_base, 0)
+
+    return 0

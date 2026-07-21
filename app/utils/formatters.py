@@ -251,6 +251,7 @@ def etiquetar_grupo_estrato(fuente: Any, estratos_raw: Any) -> str:
         or fuente_upper == "FORMACIÓN AVANZADA"
         or fuente_upper.startswith("EXTENDIENDO FRONTERAS")
         or fuente_upper == "MEJORES DEPORTISTAS"
+        or "ENLAZA MUNDOS" in fuente_upper  # V6.12
     ):
         return "1-6"
 
@@ -295,6 +296,14 @@ def calcular_legalizados_por_segmento(df: pd.DataFrame, clave_filtro: Dict[str, 
             sub = sub[sub["fuente_financiacion"] == valor_fuente_fin]
         else:
             sub = sub[sub["fuente_financiacion"].str.startswith("EXTENDIENDO FRONTERAS", na=False)]
+    elif fondo == "ENLAZA MUNDOS":  # V6.15
+        valor_fuente_fin = (
+            f"ENLAZA MUNDOS - {str(fuente).upper()}" if fuente else None
+        )
+        if valor_fuente_fin:
+            sub = sub[sub["fuente_financiacion"] == valor_fuente_fin]
+        else:
+            sub = sub[sub["fuente_financiacion"].str.startswith("ENLAZA MUNDOS", na=False)]
     elif fondo == "FORMACION AVANZADA" or fondo == "FORMACIÓN AVANZADA":
         sub = sub[sub["fuente_financiacion"].isin(["FORMACION AVANZADA", "FORMACIÓN AVANZADA"])]
     elif fondo == "MEJORES DEPORTISTAS":

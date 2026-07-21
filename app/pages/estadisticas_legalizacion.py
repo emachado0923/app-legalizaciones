@@ -39,6 +39,9 @@ MAPA_FONDOS_DISPLAY: Dict[str, str] = {
     "FONDO FORMACION AVANZADA": "🎓 Formación Avanzada",
     "EXTENDIENDO FRONTERAS EDUCATIVAS PP": "🌎 Ext. Fronteras PP",
     "EXTENDIENDO FRONTERAS EDUCATIVAS RO": "🌍 Ext. Fronteras RO",
+    # V6.15: ENLAZA MUNDOS — nombres tal como aparecen en la vista
+    "ENLAZA MUNDOS PP": "✈️ Enlaza Mundos PP",
+    "ENLAZA MUNDOS": "🌐 Enlaza Mundos RO",
 }
 
 MODALIDADES: List[str] = ["Matricula", "Sostenimiento", "Matricula y sostenimiento"]
@@ -193,7 +196,7 @@ def _renderizar_modalidades(df: pd.DataFrame) -> None:
     """3 tarjetas: conteo por Tipo_solicitud_definitiva."""
     st.markdown(
         f"<h3 style='color:{SAPIENCIA_COLORS['magenta_primary']};margin-top:16px;'>"
-        "🧾 Distribución de legalizados por modalidad</h3>",
+        "🧾 Distribución por modalidad</h3>",
         unsafe_allow_html=True,
     )
     c1, c2, c3 = st.columns(3)
@@ -338,7 +341,12 @@ def _grafico_top5_ies(df: pd.DataFrame) -> None:
 
 
 def _grafico_barras_comuna_pp(df: pd.DataFrame) -> None:
-    fondos_pp = ["FONDO PRESUPUESTO PARTICIPATIVO", "EXTENDIENDO FRONTERAS EDUCATIVAS PP"]
+    # V6.15: incluir ENLAZA MUNDOS PP en el conjunto PP
+    fondos_pp = [
+        "FONDO PRESUPUESTO PARTICIPATIVO",
+        "EXTENDIENDO FRONTERAS EDUCATIVAS PP",
+        "ENLAZA MUNDOS PP",
+    ]
     df_pp = df[df["fondo"].isin(fondos_pp)]
     if df_pp.empty or "Comuna_de_residencia" not in df_pp.columns:
         st.info("📭 Sin datos PP para las condiciones actuales.")

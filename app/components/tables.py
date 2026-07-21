@@ -12,6 +12,7 @@ from app.config import (
     SAPIENCIA_COLORS,
     normalizar_nombre_comuna,
     obtener_cupos_aprox,
+    resolver_cupos,  # V6.14
 )
 from app.utils import (
     etiquetar_grupo_estrato,
@@ -74,6 +75,28 @@ def _filtro_multiselect_fondos(key: str = "filtro_fondos_resumen") -> Tuple[List
         key=key,
     )
     return seleccion, _expandir_fondos_seleccionados(seleccion)
+
+
+# ---------------------------------------------------------------------------
+# V6.14: derivar la fuente ("RECURSO ORDINARIO" | "PRESUPUESTO PARTICIPATIVO")
+# a partir del nombre del fondo (`fuente_financiacion` de la BD).
+# ---------------------------------------------------------------------------
+def _fuente_desde_fondo(fondo: str) -> str:
+    """Extrae la fuente de financiación del nombre del fondo.
+
+    - "EXTENDIENDO FRONTERAS - RECURSO ORDINARIO" → "RECURSO ORDINARIO"
+    - "ENLAZA MUNDOS - PRESUPUESTO PARTICIPATIVO" → "PRESUPUESTO PARTICIPATIVO"
+    - Fondos "puros" (sin sufijo) → devuelve el nombre completo si es una
+      fuente conocida, o "" en otro caso (posgrados/MEJORES sin sufijo).
+    """
+    fondo_u = str(fondo or "").upper()
+    if "PRESUPUESTO PARTICIPATIVO" in fondo_u:
+        return "PRESUPUESTO PARTICIPATIVO"
+    if "RECURSO ORDINARIO" in fondo_u:
+        return "RECURSO ORDINARIO"
+    if fondo_u in {"FORMACION AVANZADA", "FORMACIÓN AVANZADA", "MEJORES DEPORTISTAS"}:
+        return "RECURSO ORDINARIO"  # todos los "puros" son RO por defecto
+    return ""
 
 
 # ---------------------------------------------------------------------------
@@ -140,7 +163,12 @@ def _construir_filas_resumen(df: pd.DataFrame) -> List[dict]:
         consumido = presupuesto - restante
         porc = (consumido / presupuesto * 100) if presupuesto > 0 else 0.0
 
-        cupos = obtener_cupos_aprox(nombre_normalizado, etiqueta_estrato)
+        # V6.14: prioridad al mapa por fondo+fuente+comuna; fallback al
+        # mapa legacy `CUPOS_APROXIMADOS` (pregrado LÍNEA con estrato).
+        fuente_para_cupos = _fuente_desde_fondo(fuente)
+        cupos = resolver_cupos(fuente, fuente_para_cupos, nombre_normalizado)
+        if cupos == 0:
+            cupos = obtener_cupos_aprox(nombre_normalizado, etiqueta_estrato)
 
         filas.append({
             "Comuna": nombre_normalizado,
@@ -161,13 +189,37 @@ def _construir_filas_resumen(df: pd.DataFrame) -> List[dict]:
 
 
 # ---------------------------------------------------------------------------
+# V6.13: helper público — el multiselect ahora se renderiza FUERA de la tabla
+# para que el mismo df filtrado alimente también las tarjetas de resumen.
+# ---------------------------------------------------------------------------
+def render_multiselect_fondos_resumen(
+    df: pd.DataFrame,
+    key: str = "filtro_fondos_resumen",
+) -> pd.DataFrame:
+    """Muestra el multiselect de fondos y retorna el df filtrado.
+
+    Se pensó para reutilizar el mismo df filtrado en varias secciones
+    (usuarios legalizados, métricas clave, tabla resumen).
+    """
+    if df.empty:
+        return df
+
+    _, fondos_expandidos = _filtro_multiselect_fondos(key=key)
+    if "fuente_financiacion" in df.columns and fondos_expandidos:
+        return df[df["fuente_financiacion"].isin(fondos_expandidos)]
+    return df
+
+
+# ---------------------------------------------------------------------------
 # Tabla de resumen general por comuna y estrato (con filtro multiselect)
 # ---------------------------------------------------------------------------
 def render_tabla_resumen_general(df: pd.DataFrame, mostrar_filtro: bool = True) -> None:
     """Renderiza la tabla de resumen general por comuna y estrato.
 
     Si `mostrar_filtro` es True, agrega un `st.multiselect` arriba para
-    filtrar por fondo. El filtro **no** afecta a las métricas superiores.
+    filtrar por fondo. Cuando la página ya filtró aguas arriba con
+    `render_multiselect_fondos_resumen`, pasar `mostrar_filtro=False`
+    y el df ya filtrado — así el multiselect no se duplica (V6.13).
     """
     if df.empty:
         st.info("📭 No hay datos para mostrar en el resumen general.")

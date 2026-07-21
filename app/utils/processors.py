@@ -22,8 +22,10 @@ def _derivar_fondo(comuna: Any) -> Optional[str]:
     Reglas, en orden:
     1. Códigos que empiezan con `220456` y son más largos → EXTENDIENDO
        FRONTERAS - PRESUPUESTO PARTICIPATIVO (uno por comuna/corregimiento).
-    2. Códigos puntuales (`220456`, `219456`, `100234`, `100235`).
-    3. Sufijo `123` o `456` con código corto → PRESUPUESTO PARTICIPATIVO
+    2. Códigos ENLAZA MUNDOS: `2214561..2214564` = RO por modalidad;
+       `221456X + id_comuna` = PP por (modalidad, comuna).  [V6.12]
+    3. Códigos puntuales (`220456`, `219456`, `100234`, `100235`).
+    4. Sufijo `123` o `456` con código corto → PRESUPUESTO PARTICIPATIVO
        (pregrado).
     """
     if comuna is None or pd.isna(comuna):
@@ -35,6 +37,14 @@ def _derivar_fondo(comuna: Any) -> Optional[str]:
     # 1. EXTENDIENDO FRONTERAS - PP (códigos 2204561 .. 22045690)
     if comuna_str.startswith("220456") and len(comuna_str) > 6:
         return "EXTENDIENDO FRONTERAS - PRESUPUESTO PARTICIPATIVO"
+
+    # V6.12: ENLAZA MUNDOS
+    # - 7 dígitos exactos (2214561..2214564) → RO por modalidad
+    # - 7+ dígitos (`221456X` + id_comuna) → PP
+    if comuna_str.startswith("221456") and len(comuna_str) >= 7:
+        if len(comuna_str) == 7:
+            return "ENLAZA MUNDOS - RECURSO ORDINARIO"
+        return "ENLAZA MUNDOS - PRESUPUESTO PARTICIPATIVO"
 
     # 2. Códigos puntuales
     codigos_puntuales = {
@@ -70,6 +80,9 @@ def _derivar_estrato_rango(comuna: Any) -> Optional[str]:
     # EXTENDIENDO FRONTERAS - PP: el sufijo 456 forma parte del prefijo, no
     # del estrato; descartar antes de buscar sufijo de estrato.
     if comuna_str.startswith("220456") and len(comuna_str) > 6:
+        return None
+    # V6.12: ENLAZA MUNDOS — todos los códigos son 1-6, sin sufijo de estrato
+    if comuna_str.startswith("221456"):
         return None
     if comuna_str.endswith("123"):
         return "1-3"

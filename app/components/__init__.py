@@ -11,7 +11,10 @@ from app.components.cards import (
     agrupar_para_resumen_estrato,
 )
 from app.components.header import render_header, render_control_bar
-from app.components.tables import render_tabla_resumen_general
+from app.components.tables import (
+    render_tabla_resumen_general,
+    render_multiselect_fondos_resumen,  # V6.13
+)
 
 __all__ = [
     "render_header",
@@ -23,4 +26,5 @@ __all__ = [
     "render_tarjeta_estrato_con_fiducias",
     "agrupar_para_resumen_estrato",
     "render_tabla_resumen_general",
+    "render_multiselect_fondos_resumen",
 ]

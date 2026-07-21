@@ -17,6 +17,14 @@ from app.config.settings import (
     CUPOS_APROXIMADOS,
     normalizar_nombre_comuna,
     obtener_cupos_aprox,
+    # V6.12: fondo ENLAZA MUNDOS
+    MAPA_ID_COMUNA,
+    PREFIJOS_ENLAZA_MUNDOS,
+    # V6.14: cupos por fondo+fuente+comuna
+    CUPOS_RO,
+    CUPOS_PP_EXTENDIENDO_FRONTERAS,
+    CUPOS_PP_ENLAZA_MUNDOS,
+    resolver_cupos,
 )
 from app.config.theme import SAPIENCIA_COLORS, inject_global_css
 
@@ -32,6 +40,12 @@ __all__ = [
     "CUPOS_APROXIMADOS",
     "normalizar_nombre_comuna",
     "obtener_cupos_aprox",
+    "MAPA_ID_COMUNA",
+    "PREFIJOS_ENLAZA_MUNDOS",
+    "CUPOS_RO",
+    "CUPOS_PP_EXTENDIENDO_FRONTERAS",
+    "CUPOS_PP_ENLAZA_MUNDOS",
+    "resolver_cupos",
     "SAPIENCIA_COLORS",
     "inject_global_css",
 ]
