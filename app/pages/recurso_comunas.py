@@ -88,6 +88,12 @@ SEGMENTOS_LEGALIZADOS: List[Dict[str, Any]] = [
         "label": "ENLAZA\nMUNDOS RO",
         "icono": "🌐",
     },
+    # V7.1: CDJ — Consejeros Distritales de Juventudes
+    {
+        "clave_filtro": {"fondo": "CDJ"},
+        "label": "CDJ\nPREGRADO-POSGRADO",
+        "icono": "🏛️",
+    },
 ]
 
 

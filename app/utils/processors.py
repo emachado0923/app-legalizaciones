@@ -55,6 +55,8 @@ def _derivar_fondo(comuna: Any) -> Optional[str]:
         # escala de usuarios (6 vs 247) sugiere que corresponde al fondo
         # de MEJORES DEPORTISTAS. Si se confirma otro fondo, ajustar aquí.
         "100235": "MEJORES DEPORTISTAS",
+        # V7: CDJ (Consejeros Distritales de Juventudes)
+        "100237": "CONSEJEROS DISTRITALES DE JUVENTUDES",
     }
     if comuna_str in codigos_puntuales:
         return codigos_puntuales[comuna_str]

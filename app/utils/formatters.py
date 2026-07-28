@@ -252,6 +252,8 @@ def etiquetar_grupo_estrato(fuente: Any, estratos_raw: Any) -> str:
         or fuente_upper.startswith("EXTENDIENDO FRONTERAS")
         or fuente_upper == "MEJORES DEPORTISTAS"
         or "ENLAZA MUNDOS" in fuente_upper  # V6.12
+        or "CDJ" in fuente_upper  # V7
+        or "CONSEJEROS DISTRITALES" in fuente_upper  # V7
     ):
         return "1-6"
 
@@ -269,9 +271,14 @@ def calcular_legalizados_por_segmento(df: pd.DataFrame, clave_filtro: Dict[str, 
 
     Acepta combinaciones de claves:
     - `fuente`: valor base de PRESUPUESTO PARTICIPATIVO / RECURSO ORDINARIO.
-    - `fondo`: distingue entre LÍNEA PREGRADO y EXTENDIENDO FRONTERAS / FA / MD.
+    - `fondo`: distingue entre LÍNEA PREGRADO / EXTENDIENDO FRONTERAS / FA /
+      MD / ENLAZA MUNDOS / CDJ.
     - `tipo`: 'pregrado' / 'posgrado' / 'pregrado_especial' (validación lógica).
     - `estrato_grupo`: '1-3' / '4-6' / '1-4' / '1-6'.
+    - `comuna`: código raw de comuna (ej. "100237") — filtra por igualdad.
+
+    V7.1: si ninguna clave produce un filtro aplicable, retorna 0 (nunca el
+    total del df). Esto evita conteos infladas ante claves desconocidas.
 
     Retorna el conteo (entero). Si no hay datos, retorna 0.
     """
@@ -281,14 +288,18 @@ def calcular_legalizados_por_segmento(df: pd.DataFrame, clave_filtro: Dict[str, 
     fondo = clave_filtro.get("fondo")
     fuente = clave_filtro.get("fuente")
     estrato_grupo = clave_filtro.get("estrato_grupo")
+    comuna = clave_filtro.get("comuna")
 
     if "fuente_financiacion" not in df.columns:
         return 0
 
     sub = df.copy()
+    filtro_aplicado = False  # V7.1: rastrear si algún filtro se aplicó realmente
 
     # Resolver `fuente_financiacion` real a partir de fondo + fuente
-    if fondo == "EXTENDIENDO FRONTERAS":
+    fondo_u = str(fondo).upper() if fondo else ""
+
+    if fondo_u == "EXTENDIENDO FRONTERAS":
         valor_fuente_fin = (
             f"EXTENDIENDO FRONTERAS - {str(fuente).upper()}" if fuente else None
         )
@@ -296,7 +307,8 @@ def calcular_legalizados_por_segmento(df: pd.DataFrame, clave_filtro: Dict[str, 
             sub = sub[sub["fuente_financiacion"] == valor_fuente_fin]
         else:
             sub = sub[sub["fuente_financiacion"].str.startswith("EXTENDIENDO FRONTERAS", na=False)]
-    elif fondo == "ENLAZA MUNDOS":  # V6.15
+        filtro_aplicado = True
+    elif fondo_u == "ENLAZA MUNDOS":  # V6.15
         valor_fuente_fin = (
             f"ENLAZA MUNDOS - {str(fuente).upper()}" if fuente else None
         )
@@ -304,16 +316,34 @@ def calcular_legalizados_por_segmento(df: pd.DataFrame, clave_filtro: Dict[str, 
             sub = sub[sub["fuente_financiacion"] == valor_fuente_fin]
         else:
             sub = sub[sub["fuente_financiacion"].str.startswith("ENLAZA MUNDOS", na=False)]
-    elif fondo == "FORMACION AVANZADA" or fondo == "FORMACIÓN AVANZADA":
+        filtro_aplicado = True
+    elif fondo_u in ("FORMACION AVANZADA", "FORMACIÓN AVANZADA"):
         sub = sub[sub["fuente_financiacion"].isin(["FORMACION AVANZADA", "FORMACIÓN AVANZADA"])]
-    elif fondo == "MEJORES DEPORTISTAS":
+        filtro_aplicado = True
+    elif fondo_u == "MEJORES DEPORTISTAS":
         sub = sub[sub["fuente_financiacion"] == "MEJORES DEPORTISTAS"]
+        filtro_aplicado = True
+    # V7.1: CDJ — el nombre completo o el alias corto
+    elif fondo_u in ("CDJ", "CONSEJEROS DISTRITALES DE JUVENTUDES") or "CONSEJEROS DISTRITALES" in fondo_u:
+        sub = sub[sub["fuente_financiacion"] == "CONSEJEROS DISTRITALES DE JUVENTUDES"]
+        filtro_aplicado = True
     elif fuente:
         # Sin `fondo`: filtro por la fuente directa (pregrado RO o PP)
         sub = sub[sub["fuente_financiacion"] == str(fuente).upper()]
+        filtro_aplicado = True
 
     if estrato_grupo and "estrato_rango" in sub.columns:
         sub = sub[sub["estrato_rango"] == estrato_grupo]
+        filtro_aplicado = True
+
+    # V7.1: soporte a clave `comuna` (ej. filtrar por código 100237 directo)
+    if comuna is not None and "comuna" in sub.columns:
+        sub = sub[sub["comuna"].astype(str) == str(comuna)]
+        filtro_aplicado = True
+
+    # V7.1: si ningún filtro se pudo aplicar, retornar 0 (no el total).
+    if not filtro_aplicado:
+        return 0
 
     if sub.empty:
         return 0

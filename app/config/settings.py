@@ -224,6 +224,15 @@ CONFIGURACION_ESTRATOS_FONDOS: Dict[str, Dict[str, Any]] = {
             {"label": "Estratos 1 - 6", "estratos": [1, 2, 3, 4, 5, 6]},
         ],
     },
+    # V7: CDJ — Consejeros Distritales de Juventudes (identificador comuna: 100237)
+    "CONSEJEROS DISTRITALES DE JUVENTUDES": {
+        "tipo": "especial",
+        "modalidades": ["Pregrado", "Posgrado"],
+        "identificador_comuna": "100237",
+        "tarjetas": [
+            {"label": "Estratos 1 - 6", "estratos": [1, 2, 3, 4, 5, 6]},
+        ],
+    },
     # V6.12: ENLAZA MUNDOS PP — códigos = [prefijo_modalidad][id_comuna]
     "ENLAZA MUNDOS - PRESUPUESTO PARTICIPATIVO": {
         "tipo": "posgrado_internacional",
@@ -258,6 +267,7 @@ OPCIONES_FILTRO_FONDOS: List[str] = [
     "EXTENDIENDO FRONTERAS",
     "MEJORES DEPORTISTAS",
     "ENLAZA MUNDOS",  # V6.12
+    "CDJ",  # V7
 ]
 
 # Cada opción del multiselect se traduce a una lista de valores reales de
@@ -276,6 +286,8 @@ MAPEO_FILTRO_A_FONDOS: Dict[str, List[str]] = {
         "ENLAZA MUNDOS - RECURSO ORDINARIO",
         "ENLAZA MUNDOS - PRESUPUESTO PARTICIPATIVO",
     ],
+    # V7: CDJ — un único fondo (código 100237, sin RO/PP)
+    "CDJ": ["CONSEJEROS DISTRITALES DE JUVENTUDES"],
 }
 
 
@@ -313,6 +325,8 @@ MAPA_COMUNAS_ESPECIALES: Dict[str, str] = {
     "22045690": "90 - SANTA ELENA (EFE)",
     # MEJORES DEPORTISTAS también tiene su propio código
     "100235": "MEJORES DEPORTISTAS",
+    # V7: CDJ — Consejeros Distritales de Juventudes
+    "100237": "CDJ - Consejeros Distritales de Juventudes",
     # V6.12: ENLAZA MUNDOS RO — 4 modalidades (códigos base sin id_comuna)
     "2214561": "ENLAZA MUNDOS - Pasantía (RO)",
     "2214562": "ENLAZA MUNDOS - Doble Titulación (RO)",
@@ -470,6 +484,7 @@ CUPOS_RO: Dict[str, int] = {
     "FORMACION AVANZADA": 50,
     "MEJORES DEPORTISTAS": 40,
     "LINEA PREGRADO RO": 301,
+    "CDJ": 4,  # V7
 }
 
 CUPOS_PP_EXTENDIENDO_FRONTERAS: Dict[str, int] = {
@@ -532,11 +547,19 @@ def resolver_cupos(fondo: Any, fuente: Any, comuna_normalizada: Any) -> int:
       Se admite con o sin cero inicial en el número.
     Retorna 0 si no hay match.
     """
-    if not fondo or not fuente:
+    if not fondo:
         return 0
 
     fondo_u = str(fondo).upper()
-    fuente_u = str(fuente).upper()
+    fuente_u = str(fuente or "").upper()
+
+    # V7: CDJ es un fondo especial (no aplica RO/PP tradicional); atender antes
+    # del guard de `fuente` porque puede llegar sin valor de fuente.
+    if "CDJ" in fondo_u or "CONSEJEROS DISTRITALES" in fondo_u:
+        return CUPOS_RO.get("CDJ", 0)
+
+    if not fuente_u:
+        return 0
 
     if fuente_u == "RECURSO ORDINARIO":
         if "EXTENDIENDO FRONTERAS" in fondo_u:
