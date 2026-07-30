@@ -175,6 +175,73 @@ def format_comuna_con_numero(comuna_nombre: Any) -> str:
 
 
 # ---------------------------------------------------------------------------
+# V8: resolver preseleccionados por (fondo, fuente, comuna)
+# ---------------------------------------------------------------------------
+def resolver_preseleccionados(fondo: Any, fuente: Any, comuna_normalizada: Any) -> int:
+    """Retorna los preseleccionados según (fondo, fuente, comuna).
+
+    - fondo: valor de `fuente_financiacion` (nombre completo del fondo).
+    - fuente: `"RECURSO ORDINARIO"` | `"PRESUPUESTO PARTICIPATIVO"`.
+    - comuna_normalizada: nombre legible (ej. `"07 - ROBLEDO"`, `"4 - ARANJUEZ (EFE)"`).
+
+    Retorna 0 si no hay cifra definida para esa combinación.
+    """
+    # Import perezoso para evitar el ciclo `formatters ↔ config`.
+    from app.config.settings import (
+        PRESELECCIONADOS_PP_PREGRADO,
+        PRESELECCIONADOS_PP_EXTENDIENDO_FRONTERAS,
+        PRESELECCIONADOS_PP_ENLAZA_MUNDOS,
+        PRESELECCIONADOS_FONDO_UNICO,
+    )
+
+    fondo_u = str(fondo or "").upper()
+    fuente_u = str(fuente or "").upper()
+
+    # Nombre base de la comuna: reducir a "N - NOMBRE" quitando sufijos y ceros iniciales.
+    raw = str(comuna_normalizada or "").split(" (")[0].strip()
+    partes = [p.strip() for p in raw.split(" - ") if p.strip()]
+    if len(partes) >= 2:
+        prefijo_num = partes[0].lstrip("0") or "0"
+        nombre_base = f"{prefijo_num} - {partes[1]}"
+    else:
+        nombre_base = raw
+
+    # ── PRESUPUESTO PARTICIPATIVO ─────────────────────────────────
+    if fuente_u == "PRESUPUESTO PARTICIPATIVO":
+        if "ENLAZA MUNDOS" in fondo_u:
+            return PRESELECCIONADOS_PP_ENLAZA_MUNDOS.get(nombre_base, 0)
+        if "EXTENDIENDO FRONTERAS" in fondo_u:
+            return PRESELECCIONADOS_PP_EXTENDIENDO_FRONTERAS.get(nombre_base, 0)
+        # Pregrado PP puro (PUAP, FONDO PP, o simplemente "PRESUPUESTO PARTICIPATIVO")
+        return PRESELECCIONADOS_PP_PREGRADO.get(nombre_base, 0)
+
+    # ── RECURSO ORDINARIO ─────────────────────────────────────────
+    if fuente_u == "RECURSO ORDINARIO":
+        if "ENLAZA MUNDOS" in fondo_u:
+            return PRESELECCIONADOS_FONDO_UNICO["ENLAZA MUNDOS RO"]
+        if "EXTENDIENDO FRONTERAS" in fondo_u:
+            return PRESELECCIONADOS_FONDO_UNICO["EXTENDIENDO FRONTERAS RO"]
+        if "MEJORES DEPORTISTAS" in fondo_u:
+            return PRESELECCIONADOS_FONDO_UNICO["MEJORES DEPORTISTAS"]
+        if "FORMACION AVANZADA" in fondo_u or "FORMACIÓN AVANZADA" in fondo_u:
+            return PRESELECCIONADOS_FONDO_UNICO["FORMACION AVANZADA"]
+        if "CDJ" in fondo_u or "CONSEJEROS DISTRITALES" in fondo_u:
+            return PRESELECCIONADOS_FONDO_UNICO["CDJ"]
+        # Pregrado RO (PUAP / crédito condonable pregrado)
+        return PRESELECCIONADOS_FONDO_UNICO["PREGRADO RO"]
+
+    # ── Fondos sin fuente definida ───────────────────────────────
+    if "CDJ" in fondo_u or "CONSEJEROS DISTRITALES" in fondo_u:
+        return PRESELECCIONADOS_FONDO_UNICO["CDJ"]
+    if "MEJORES DEPORTISTAS" in fondo_u:
+        return PRESELECCIONADOS_FONDO_UNICO["MEJORES DEPORTISTAS"]
+    if "FORMACION AVANZADA" in fondo_u or "FORMACIÓN AVANZADA" in fondo_u:
+        return PRESELECCIONADOS_FONDO_UNICO["FORMACION AVANZADA"]
+
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # CORRECCIÓN V3: badge y color de utilización (5 niveles)
 # ---------------------------------------------------------------------------
 def get_badge_estado(pct_utilizacion: Any) -> Dict[str, str]:

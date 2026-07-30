@@ -25,6 +25,11 @@ from app.config.settings import (
     CUPOS_PP_EXTENDIENDO_FRONTERAS,
     CUPOS_PP_ENLAZA_MUNDOS,
     resolver_cupos,
+    # V8: preseleccionados por fondo+fuente+comuna
+    PRESELECCIONADOS_PP_PREGRADO,
+    PRESELECCIONADOS_PP_EXTENDIENDO_FRONTERAS,
+    PRESELECCIONADOS_PP_ENLAZA_MUNDOS,
+    PRESELECCIONADOS_FONDO_UNICO,
 )
 from app.config.theme import SAPIENCIA_COLORS, inject_global_css
 
@@ -46,6 +51,10 @@ __all__ = [
     "CUPOS_PP_EXTENDIENDO_FRONTERAS",
     "CUPOS_PP_ENLAZA_MUNDOS",
     "resolver_cupos",
+    "PRESELECCIONADOS_PP_PREGRADO",
+    "PRESELECCIONADOS_PP_EXTENDIENDO_FRONTERAS",
+    "PRESELECCIONADOS_PP_ENLAZA_MUNDOS",
+    "PRESELECCIONADOS_FONDO_UNICO",
     "SAPIENCIA_COLORS",
     "inject_global_css",
 ]

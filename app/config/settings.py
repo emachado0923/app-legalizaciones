@@ -536,6 +536,74 @@ CUPOS_PP_ENLAZA_MUNDOS: Dict[str, int] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# V8: Preseleccionados por fondo, fuente y comuna
+# ---------------------------------------------------------------------------
+PRESELECCIONADOS_PP_PREGRADO: Dict[str, int] = {
+    "1 - POPULAR": 74,
+    "2 - SANTA CRUZ": 77,
+    "3 - MANRIQUE": 94,
+    "4 - ARANJUEZ": 81,
+    "5 - CASTILLA": 74,
+    "6 - DOCE DE OCTUBRE": 73,
+    "7 - ROBLEDO": 113,
+    "8 - VILLA HERMOSA": 80,
+    "9 - BUENOS AIRES": 98,
+    "10 - LA CANDELARIA": 67,
+    "11 - LAURELES/ESTADIO": 41,
+    "12 - LA AMERICA": 72,
+    "13 - SAN JAVIER": 89,
+    "14 - POBLADO": 72,
+    "15 - GUAYABAL": 58,
+    "16 - BELEN": 153,
+    "50 - SAN SEBASTIAN DE PALMITAS": 18,
+    "60 - SAN CRISTOBAL": 78,
+    "70 - ALTAVISTA": 40,
+    "80 - SAN ANTONIO DE PRADO": 139,
+    "90 - SANTA ELENA": 60,
+}
+
+PRESELECCIONADOS_PP_EXTENDIENDO_FRONTERAS: Dict[str, int] = {
+    "1 - POPULAR": 19,
+    "2 - SANTA CRUZ": 25,
+    "4 - ARANJUEZ": 28,
+    "5 - CASTILLA": 23,
+    "6 - DOCE DE OCTUBRE": 17,
+    "7 - ROBLEDO": 45,
+    "8 - VILLA HERMOSA": 20,
+    "9 - BUENOS AIRES": 26,
+    "10 - LA CANDELARIA": 25,
+    "11 - LAURELES/ESTADIO": 33,
+    "12 - LA AMERICA": 21,
+    "13 - SAN JAVIER": 28,
+    "14 - POBLADO": 23,
+    "15 - GUAYABAL": 8,
+    "16 - BELEN": 33,
+    "50 - SAN SEBASTIAN DE PALMITAS": 4,
+    "60 - SAN CRISTOBAL": 26,
+    "70 - ALTAVISTA": 15,
+    "80 - SAN ANTONIO DE PRADO": 24,
+    "90 - SANTA ELENA": 19,
+}
+
+PRESELECCIONADOS_PP_ENLAZA_MUNDOS: Dict[str, int] = {
+    "4 - ARANJUEZ": 5,
+    "7 - ROBLEDO": 10,
+    "13 - SAN JAVIER": 6,
+    "14 - POBLADO": 1,
+    "16 - BELEN": 9,
+}
+
+PRESELECCIONADOS_FONDO_UNICO: Dict[str, int] = {
+    "PREGRADO RO": 945,
+    "EXTENDIENDO FRONTERAS RO": 84,
+    "MEJORES DEPORTISTAS": 11,
+    "FORMACION AVANZADA": 76,
+    "CDJ": 4,
+    "ENLAZA MUNDOS RO": 75,
+}
+
+
 def resolver_cupos(fondo: Any, fuente: Any, comuna_normalizada: Any) -> int:
     """Devuelve los cupos aproximados para (fondo, fuente, comuna).
 

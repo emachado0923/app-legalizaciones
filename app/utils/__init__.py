@@ -24,6 +24,8 @@ from app.utils.formatters import (
     # CORRECCIÓN V4
     escapar_html,
     formatear_documento,
+    # V8
+    resolver_preseleccionados,
 )
 from app.utils.validators import (
     es_documento_valido,
@@ -52,6 +54,7 @@ __all__ = [
     "get_color_utilizacion",
     "escapar_html",
     "formatear_documento",
+    "resolver_preseleccionados",
     # validators
     "es_documento_valido",
     "buscar_por_documento",

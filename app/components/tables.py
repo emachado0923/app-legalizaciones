@@ -19,6 +19,7 @@ from app.utils import (
     format_currency,
     format_percentage,
     get_comuna_numero,
+    resolver_preseleccionados,  # V8
 )
 
 
@@ -170,11 +171,17 @@ def _construir_filas_resumen(df: pd.DataFrame) -> List[dict]:
         if cupos == 0:
             cupos = obtener_cupos_aprox(nombre_normalizado, etiqueta_estrato)
 
+        # V8: Preseleccionados por (fondo, fuente, comuna)
+        preseleccionados = resolver_preseleccionados(
+            fondo=fuente, fuente=fuente_para_cupos, comuna_normalizada=nombre_normalizado
+        )
+
         filas.append({
             "Comuna": nombre_normalizado,
             "Grupo Estrato": etiqueta_estrato,
             "Usuarios Legalizados": usuarios,
             "Cupos Aprox": cupos,
+            "Preseleccionados": preseleccionados,  # V8
             "Presupuesto Total": format_currency(presupuesto),
             "Presupuesto Consumido": format_currency(consumido),
             "Presupuesto Restante": format_currency(restante),
@@ -261,6 +268,7 @@ def render_tabla_resumen_general(df: pd.DataFrame, mostrar_filtro: bool = True) 
                 "USUARIOS LEGALIZADOS", format="%d"
             ),
             "Cupos Aprox": st.column_config.NumberColumn("CUPOS APROX", format="%d"),
+            "Preseleccionados": st.column_config.NumberColumn("PRESELECCIONADOS", format="%d"),  # V8
             "Presupuesto Total": st.column_config.TextColumn("PRESUPUESTO TOTAL"),
             "Presupuesto Consumido": st.column_config.TextColumn("PRESUPUESTO CONSUMIDO"),
             "Presupuesto Restante": st.column_config.TextColumn("PRESUPUESTO RESTANTE"),
