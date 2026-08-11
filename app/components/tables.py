@@ -171,9 +171,12 @@ def _construir_filas_resumen(df: pd.DataFrame) -> List[dict]:
         if cupos == 0:
             cupos = obtener_cupos_aprox(nombre_normalizado, etiqueta_estrato)
 
-        # V8: Preseleccionados por (fondo, fuente, comuna)
+        # V8/V9.1: Preseleccionados por (fondo, fuente, comuna, grupo_estrato)
         preseleccionados = resolver_preseleccionados(
-            fondo=fuente, fuente=fuente_para_cupos, comuna_normalizada=nombre_normalizado
+            fondo=fuente,
+            fuente=fuente_para_cupos,
+            comuna_normalizada=nombre_normalizado,
+            grupo_estrato=etiqueta_estrato,  # V9.1
         )
 
         filas.append({

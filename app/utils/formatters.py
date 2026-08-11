@@ -177,18 +177,25 @@ def format_comuna_con_numero(comuna_nombre: Any) -> str:
 # ---------------------------------------------------------------------------
 # V8: resolver preseleccionados por (fondo, fuente, comuna)
 # ---------------------------------------------------------------------------
-def resolver_preseleccionados(fondo: Any, fuente: Any, comuna_normalizada: Any) -> int:
-    """Retorna los preseleccionados según (fondo, fuente, comuna).
+def resolver_preseleccionados(
+    fondo: Any,
+    fuente: Any,
+    comuna_normalizada: Any,
+    grupo_estrato: Any = "",  # V9.1
+) -> int:
+    """Retorna los preseleccionados según (fondo, fuente, comuna, grupo_estrato).
 
     - fondo: valor de `fuente_financiacion` (nombre completo del fondo).
     - fuente: `"RECURSO ORDINARIO"` | `"PRESUPUESTO PARTICIPATIVO"`.
     - comuna_normalizada: nombre legible (ej. `"07 - ROBLEDO"`, `"4 - ARANJUEZ (EFE)"`).
+    - grupo_estrato: `"1-3"` | `"4-6"` | `""`. V9.1: solo aplica para PP pregrado,
+      que ahora se diferencia por rango. Si no se especifica, retorna la suma.
 
     Retorna 0 si no hay cifra definida para esa combinación.
     """
     # Import perezoso para evitar el ciclo `formatters ↔ config`.
     from app.config.settings import (
-        PRESELECCIONADOS_PP_PREGRADO,
+        PRESELECCIONADOS_PP_PREGRADO_POR_ESTRATO,  # V9.1
         PRESELECCIONADOS_PP_EXTENDIENDO_FRONTERAS,
         PRESELECCIONADOS_PP_ENLAZA_MUNDOS,
         PRESELECCIONADOS_FONDO_UNICO,
@@ -212,8 +219,15 @@ def resolver_preseleccionados(fondo: Any, fuente: Any, comuna_normalizada: Any) 
             return PRESELECCIONADOS_PP_ENLAZA_MUNDOS.get(nombre_base, 0)
         if "EXTENDIENDO FRONTERAS" in fondo_u:
             return PRESELECCIONADOS_PP_EXTENDIENDO_FRONTERAS.get(nombre_base, 0)
-        # Pregrado PP puro (PUAP, FONDO PP, o simplemente "PRESUPUESTO PARTICIPATIVO")
-        return PRESELECCIONADOS_PP_PREGRADO.get(nombre_base, 0)
+        # V9.1: Pregrado PP con diferenciación por estrato
+        por_estrato = PRESELECCIONADOS_PP_PREGRADO_POR_ESTRATO.get(nombre_base, {})
+        if not por_estrato:
+            return 0
+        estrato_key = str(grupo_estrato or "").replace(" ", "").strip()
+        if estrato_key in por_estrato:
+            return por_estrato[estrato_key]
+        # Sin grupo específico → suma total (1-3 + 4-6)
+        return sum(por_estrato.values())
 
     # ── RECURSO ORDINARIO ─────────────────────────────────────────
     if fuente_u == "RECURSO ORDINARIO":
