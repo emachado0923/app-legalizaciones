@@ -13,6 +13,7 @@ from app.database.connector import (
     fetch_presupuesto_comuna,
     fetch_citas,
     fetch_giros_informe,
+    fetch_legalizados_por_comunagiros,  # V10
     DatabaseError,
 )
 
@@ -22,5 +23,6 @@ __all__ = [
     "fetch_presupuesto_comuna",
     "fetch_citas",
     "fetch_giros_informe",
+    "fetch_legalizados_por_comunagiros",
     "DatabaseError",
 ]

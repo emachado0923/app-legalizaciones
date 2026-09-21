@@ -33,7 +33,11 @@ from app.config import (
     normalizar_nombre_comuna,
     settings,
 )
-from app.database import DatabaseError, fetch_presupuesto_comuna
+from app.database import (
+    DatabaseError,
+    fetch_legalizados_por_comunagiros,  # V10
+    fetch_presupuesto_comuna,
+)
 from app.utils import (
     calcular_legalizados_por_segmento,
     calculate_summary_metrics,
@@ -101,10 +105,59 @@ SEGMENTOS_LEGALIZADOS: List[Dict[str, Any]] = [
 # Carga de datos cacheada (NO cachea conexiones, solo DataFrames)
 # ---------------------------------------------------------------------------
 @st.cache_data(ttl=settings.CACHE_TTL, show_spinner=False)
+def _cargar_legalizados(periodo: str = "2026-2") -> pd.DataFrame:
+    """V10: legalizados por comunagiros (cache independiente del presupuesto)."""
+    return fetch_legalizados_por_comunagiros(periodo)
+
+
+@st.cache_data(ttl=settings.CACHE_TTL, show_spinner=False)
 def _cargar_presupuesto() -> pd.DataFrame:
-    """Trae el presupuesto del periodo activo y enriquece columnas derivadas."""
+    """Trae presupuesto + legalizados y enriquece columnas derivadas.
+
+    V10: la columna `numero_usuarios_comuna` se REEMPLAZA por el conteo real
+    de beneficios únicos (documento + comunagiros) que devuelve la vista
+    `giro_vwbeneficiario_proyec_renova_giro` para el periodo 2026-2.
+    Si la vista falla, se conserva el valor original y se muestra warning.
+    """
     df = fetch_presupuesto_comuna(settings.CURRENT_PERIOD)
-    return process_comuna_data(df)
+    df = process_comuna_data(df)
+    if df.empty:
+        return df
+
+    # V10: merge con df_legalizados usando comuna = comunagiros.
+    # Si la nueva vista falla, dejamos `_legalizados_error` en el df para
+    # que la capa de UI muestre un st.error() amigable y las tarjetas queden en 0.
+    df["_legalizados_error"] = ""
+    try:
+        df_leg = _cargar_legalizados("2026-2")
+    except Exception as exc:  # noqa: BLE001
+        df["_legalizados_error"] = f"Error al cargar la vista de legalizados: {exc}"
+        df["numero_usuarios_comuna"] = 0
+        df["legalizados"] = 0
+        return df
+
+    if not df_leg.empty:
+        df_leg2 = df_leg.rename(columns={"comunagiros": "comuna"})
+        # Garantizar tipos compatibles antes del merge
+        df["comuna"] = pd.to_numeric(df["comuna"], errors="coerce").astype("Int64")
+        df_leg2["comuna"] = pd.to_numeric(df_leg2["comuna"], errors="coerce").astype("Int64")
+        df = df.merge(df_leg2, on="comuna", how="left")
+        df["legalizados"] = df["legalizados"].fillna(0).astype(int)
+
+        # V10 — evitar sobreconteo: la tabla tiene N filas por comuna (una por
+        # fiducia). Asigno `legalizados` sólo a la 1ª fila por comuna y 0 al
+        # resto, para que sum() por (comuna|fondo|estrato) devuelva el valor real.
+        df = df.reset_index(drop=True)
+        primera_fila_por_comuna = df.groupby("comuna").head(1).index
+        mask_no_primera = ~df.index.isin(primera_fila_por_comuna)
+        df.loc[mask_no_primera, "legalizados"] = 0
+        df["numero_usuarios_comuna"] = df["legalizados"]
+    else:
+        # Vista vacía: mantener 0 y no romper
+        df["numero_usuarios_comuna"] = 0
+        df["legalizados"] = 0
+
+    return df
 
 
 # ---------------------------------------------------------------------------
@@ -417,6 +470,13 @@ def _fragmento_datos_en_vivo() -> None:
     if df.empty:
         st.warning("⚠️ No se encontraron datos para el periodo actual.")
         return
+
+    # V10: si el merge con la vista de legalizados falló, avisar al usuario
+    if "_legalizados_error" in df.columns:
+        err_msg = df["_legalizados_error"].dropna().unique()
+        err_msg = [m for m in err_msg if str(m).strip()]
+        if err_msg:
+            st.error(f"❌ {err_msg[0]}. Las tarjetas de legalizados se mostrarán en 0.")
 
     # V6.13: filtro global de fondos que alimenta USUARIOS LEGALIZADOS,
     # TABLA RESUMEN y RESUMEN GENERAL DE RECURSOS. Las tarjetas dinámicas

@@ -113,6 +113,32 @@ def fetch_citas() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+# V10: legalizados por comunagiros desde vista de giros
+def fetch_legalizados_por_comunagiros(periodo: str = "2026-2") -> pd.DataFrame:
+    """Cuenta beneficios únicos (documento + comunagiros) por comunagiros.
+
+    Fuente: `giro_vwbeneficiario_proyec_renova_giro` filtrada por
+    `perido_legalizacion` (SIC: la columna real de la vista tiene typo;
+    NO existe `periodo_legalizacion`).
+
+    Retorna DataFrame con columnas: `comunagiros`, `legalizados`.
+    """
+    # Query parametrizada; el nombre de la columna real trae typo.
+    query = (
+        "SELECT comunagiros, "
+        "COUNT(DISTINCT CONCAT(documento_beneficiario, '_', comunagiros)) AS legalizados "
+        "FROM giro_vwbeneficiario_proyec_renova_giro "
+        "WHERE perido_legalizacion = %s "
+        "GROUP BY comunagiros"
+    )
+    rows = fetch_query(query, (periodo,))
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return pd.DataFrame(columns=["comunagiros", "legalizados"])
+    df["legalizados"] = df["legalizados"].astype(int)
+    return df
+
+
 # V5.10: nueva página Estadísticas Legalización
 def fetch_giros_informe(convocatoria: str = "2026-2") -> pd.DataFrame:
     """Trae los registros de la vista `vw_giros_informe_total` filtrados por convocatoria.
